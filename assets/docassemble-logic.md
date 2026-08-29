@@ -1,3 +1,9 @@
+---
+layout: page
+title: "Docassemble Interview Logic"
+nav_exclude: true
+---
+
 # Docassemble Interview Logic
 
 ## Mental model: a checklist, not a flowchart

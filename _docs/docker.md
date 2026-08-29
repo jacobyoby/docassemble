@@ -1534,6 +1534,10 @@ your container for the new configuration to take effect.
 * <a name="PIPEXTRAINDEXURLS"></a>`PIPEXTRAINDEXURLS`: This controls
   the extra package index sites that `pip` uses. See the [`pip extra
   index urls`] configuration directive.
+* <a name="PIPTRUSTEDHOST"></a>`PIPTRUSTEDHOST`: If the index URL
+  uses http:// instead of https://, you can set `PIPTRUSTEDHOST` to
+  the domain you are using, so that it is considered a trusted site.
+  See the [`pip trusted host`] configuration directive:
 * <a name="ENABLEUNOCONV"></a>`ENABLEUNOCONV`: This controls whether
   [unoserver] is used for DOCX to PDF conversion. It can be set to
   `true` or `false`. See the [`enable unoconv`] configuration
@@ -3793,6 +3797,7 @@ endpoints that you can use.
 [Docker volumes]: https://docs.docker.com/storage/volumes/
 [`pip index url`]: {{ site.baseurl }}/docs/config.html#pip index url
 [`pip extra index urls`]: {{ site.baseurl }}/docs/config.html#pip extra index urls
+[`pip trusted host`]: {{ site.baseurl }}/docs/config.html#pip trusted host
 [ARM]: https://en.wikipedia.org/wiki/ARM_architecture_family
 [`debug`]: {{ site.baseurl }}/docs/config.html#debug
 [`allow demo`]: {{ site.baseurl }}/docs/config.html#allow demo
