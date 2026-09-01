@@ -1784,8 +1784,8 @@ def playground_files():
         if argument:
             the_directory = directory_for(area, current_project)
             the_file = add_project(argument, current_project)
-            filename = os.path.join(the_directory, argument)
-            if os.path.exists(filename):
+            filename = werkzeug.utils.safe_join(the_directory, argument)
+            if filename is not None and os.path.exists(filename):
                 os.remove(filename)
                 area.finalize()
                 for key in r.keys('da:interviewsource:docassemble.playground' + str(playground_user.id) + project_name(current_project) + ':*'):
@@ -1800,10 +1800,10 @@ def playground_files():
         # argument = re.sub(r'[^A-Za-z0-9\-\_\. ]', '', request.args.get('convert'))
         argument = request.args.get('convert')
         if argument:
-            filename = os.path.join(the_directory, argument)
-            if os.path.exists(filename):
+            filename = werkzeug.utils.safe_join(the_directory, argument)
+            if filename is not None and os.path.exists(filename):
                 to_file = os.path.splitext(argument)[0] + '.md'
-                to_path = os.path.join(the_directory, to_file)
+                to_path = werkzeug.utils.safe_join(the_directory, to_file)
                 if not os.path.exists(to_path):
                     extension, mimetype = get_ext_and_mimetype(argument)
                     if mimetype and mimetype in convertible_mimetypes:
@@ -1840,7 +1840,9 @@ def playground_files():
                             return redirect(url_for('develop.playground_files', section=section, project=current_project))
                         filename = re.sub(r'[^A-Za-z0-9\-\_\. ]+', '_', filename)
                         the_file = filename
-                        filename = os.path.join(the_directory, filename)
+                        filename = werkzeug.utils.safe_join(the_directory, filename)
+                        if filename is None:
+                            return ('File not found', 404)
                         up_file.save(filename)
                         for key in r.keys('da:interviewsource:docassemble.playground' + str(playground_user.id) + project_name(current_project) + ':*'):
                             r.incr(key.decode())
@@ -1855,8 +1857,8 @@ def playground_files():
                 flash(word("Upload successful"), "success")
         if formtwo.delete.data:
             if the_file != '':
-                filename = os.path.join(the_directory, the_file)
-                if os.path.exists(filename):
+                filename = werkzeug.utils.safe_join(the_directory, the_file)
+                if filename is not None and os.path.exists(filename):
                     os.remove(filename)
                     for key in r.keys('da:interviewsource:docassemble.playground' + str(playground_user.id) + project_name(current_project) + ':*'):
                         r.incr(key.decode())
@@ -1869,11 +1871,13 @@ def playground_files():
                 if section == 'modules' and not re.search(r'\.py$', the_file):
                     the_file = re.sub(r'\..*', '', the_file) + '.py'
                 if formtwo.original_file_name.data and formtwo.original_file_name.data != the_file:
-                    old_filename = os.path.join(the_directory, formtwo.original_file_name.data)
+                    old_filename = werkzeug.utils.safe_join(the_directory, formtwo.original_file_name.data)
                     cloud_trash(use_gd, use_od, section, formtwo.original_file_name.data, current_project)
-                    if os.path.isfile(old_filename):
+                    if old_filename is not None and os.path.isfile(old_filename):
                         os.remove(old_filename)
-                filename = os.path.join(the_directory, the_file)
+                filename = werkzeug.utils.safe_join(the_directory, the_file)
+                if filename is None:
+                    return ('File not found', 404)
                 with open(filename, 'w', encoding='utf-8') as fp:
                     fp.write(re.sub(r'\r\n', r'\n', formtwo.file_content.data))
                 the_time = formatted_current_time()
@@ -1950,8 +1954,8 @@ def playground_files():
         mode = 'py'
     formtwo.original_file_name.data = the_file
     formtwo.file_name.data = the_file
-    if the_file != '' and os.path.isfile(os.path.join(the_directory, the_file)):
-        filename = os.path.join(the_directory, the_file)
+    if the_file != '' and (werkzeug.utils.safe_join(the_directory, the_file) is not None) and os.path.isfile(werkzeug.utils.safe_join(the_directory, the_file)):
+        filename = werkzeug.utils.safe_join(the_directory, the_file)
     else:
         filename = None
     if filename is not None:
@@ -3429,7 +3433,9 @@ def ensure_ml_file_exists(interview, yaml_file, current_project):
         if source_filename not in source_dir.list_of_files():
             # logmessage("Source filename does not exist yet")
             source_dir.fix()
-            source_path = os.path.join(source_directory, source_filename)
+            source_path = werkzeug.utils.safe_join(source_directory, source_filename)
+            if source_path is None:
+                return ('File not found', 404)
             with open(source_path, 'a', encoding='utf-8'):
                 os.utime(source_path, None)
             source_dir.finalize()
@@ -3811,7 +3817,9 @@ def playground_page():
                         return redirect(url_for('develop.playground_page', project=current_project))
                     filename = re.sub(r'[^A-Za-z0-9\-\_\. ]+', '_', filename)
                     new_file = filename
-                    filename = os.path.join(the_directory, filename)
+                    filename = werkzeug.utils.safe_join(the_directory, filename)
+                    if filename is None:
+                        return ('File not found', 404)
                     up_file.save(filename)
                     try:
                         with open(filename, 'r', encoding='utf-8') as fp:
@@ -3834,8 +3842,8 @@ def playground_page():
             if the_file != '':
                 if not re.search(r'\.ya?ml$', the_file):
                     the_file = re.sub(r'\..*', '', the_file) + '.yml'
-                filename = os.path.join(the_directory, the_file)
-                if not os.path.isfile(filename):
+                filename = werkzeug.utils.safe_join(the_directory, the_file)
+                if filename is None or not os.path.isfile(filename):
                     with open(filename, 'a', encoding='utf-8'):
                         os.utime(filename, None)
             else:
@@ -3894,8 +3902,8 @@ def playground_page():
     console_messages = []
     if request.method == 'POST' and the_file != '' and valid_form:
         if form.delete.data:
-            filename_to_del = os.path.join(the_directory, form.playground_name.data)
-            if os.path.isfile(filename_to_del):
+            filename_to_del = werkzeug.utils.safe_join(the_directory, form.playground_name.data)
+            if filename_to_del is not None and os.path.isfile(filename_to_del):
                 os.remove(filename_to_del)
                 flash(word('File deleted.'), 'info')
                 r.delete('da:interviewsource:docassemble.playground' + str(playground_user.id) + project_name(current_project) + ':' + the_file)
@@ -3911,7 +3919,7 @@ def playground_page():
             flash(word('File not deleted.  There was an error.'), 'error')
         if (form.submit.data or form.run.data):
             if form.original_playground_name.data and form.original_playground_name.data != the_file:
-                old_filename = os.path.join(the_directory, form.original_playground_name.data)
+                old_filename = werkzeug.utils.safe_join(the_directory, form.original_playground_name.data)
                 if not is_ajax:
                     flash(word("Changed name of interview"), 'success')
                 cloud_trash(use_gd, use_od, 'questions', form.original_playground_name.data, current_project)
