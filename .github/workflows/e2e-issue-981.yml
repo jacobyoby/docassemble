@@ -99,6 +99,25 @@ jobs:
       - name: Full API suite
         run: python3 .github/workflows/e2e/e2e_suite.py http://localhost:8080 "$KEY"
 
+      - name: Issue-980 control - boolean config must crash the unpatched release
+        run: |
+          docker exec da bash -c "cp /usr/share/docassemble/config/config.yml /tmp/config.yml.bak && printf '%s\n' 'main page title url opens in other window: False' >> /usr/share/docassemble/config/config.yml && supervisorctl restart uwsgi"
+          sleep 30
+          bash .github/workflows/e2e/issue_980_repro.sh http://localhost:8080 da expect-fail
+
+      - name: Install this branch's parse.py and restart
+        run: |
+          P=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/base/parse.py")
+          docker cp docassemble_base/docassemble/base/parse.py da:"$P"
+          docker exec da bash -c "supervisorctl restart uwsgi"
+          sleep 30
+
+      - name: Issue-980 - patched server must survive the boolean config
+        run: |
+          bash .github/workflows/e2e/issue_980_repro.sh http://localhost:8080 da expect-pass
+          docker exec da bash -c "cp /tmp/config.yml.bak /usr/share/docassemble/config/config.yml && supervisorctl restart uwsgi"
+          sleep 30
+
       - name: Set up node for ALKiln
         uses: actions/setup-node@v4
         with:
