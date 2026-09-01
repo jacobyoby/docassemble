@@ -52,6 +52,7 @@ from pikepdf import Pdf
 import google_auth_httplib2
 import google.cloud
 import docassemble.base.pandoc
+from docassemble.base import email_crypto
 from . import DA
 from .config import in_celery, daconfig
 from .dates import (
@@ -12094,7 +12095,7 @@ def send_fax(fax_number, file_object, config='default', country=None):
     return FaxStatus(server_send_fax(fax_string(fax_number, country=country), file_object, config, country=country))
 
 
-def send_email(to=None, sender=None, reply_to=None, cc=None, bcc=None, body=None, html=None, subject="", template=None, task=None, task_persistent=False, attachments=None, mailgun_variables=None, dry_run=False, config=None):
+def send_email(to=None, sender=None, reply_to=None, cc=None, bcc=None, body=None, html=None, subject="", template=None, task=None, task_persistent=False, attachments=None, mailgun_variables=None, dry_run=False, config=None, smime_encrypt_for=None, pgp_encrypt_for=None):
     """Send an email message.
 
     Args:
@@ -12123,6 +12124,15 @@ def send_email(to=None, sender=None, reply_to=None, cc=None, bcc=None, body=None
             in the X-Mailgun-Variables header.
         dry_run (bool): If True, do not send; only check whether sending would
             succeed.
+        smime_encrypt_for (list or None): Recipient X.509 certificate(s) as
+            PEM strings, file paths, or DAFiles. The body, HTML, and
+            attachments are sealed into one S/MIME enveloped-data part
+            (smime.p7m). A missing or unparseable certificate raises an
+            error; nothing is ever sent unencrypted.
+        pgp_encrypt_for (list or None): Recipient PGP public key(s), ASCII
+            armored, as strings, file paths, or DAFiles. The message is
+            sealed with gpg into an armored part (message.asc), with the
+            same fail-closed rule.
         config (str or None): Email configuration name. Defaults to the
             interview's ``email config`` metadata or ``'default'``.
 
@@ -12229,6 +12239,29 @@ def send_email(to=None, sender=None, reply_to=None, cc=None, bcc=None, body=None
                             success = False
                     else:
                         success = False
+    if smime_encrypt_for is not None or pgp_encrypt_for is not None:
+        if smime_encrypt_for is not None and pgp_encrypt_for is not None:
+            raise DAException("send_email: smime_encrypt_for and pgp_encrypt_for cannot both be given")
+        if not success:
+            raise DAException("send_email: encryption was requested but an attachment could not be prepared; refusing to send")
+        the_sources = smime_encrypt_for if smime_encrypt_for is not None else pgp_encrypt_for
+        if (not isinstance(the_sources, (list, DAList, DASet, abc.Iterable))) or isinstance(the_sources, (str, bytes)):
+            the_sources = [the_sources]
+        the_sources = list(the_sources)
+        plain_attachments = [(att.filename, att.content_type, att.data) for att in msg.attachments]
+        inner = email_crypto.build_inner_mime(msg.body, msg.html, plain_attachments)
+        try:
+            if smime_encrypt_for is not None:
+                (new_body, sealed) = email_crypto.smime_encrypt(inner, the_sources)
+            else:
+                (new_body, sealed) = email_crypto.pgp_encrypt(inner, the_sources)
+        except email_crypto.DAEmailCryptoError as err:
+            raise DAException("send_email: refusing to send unencrypted: " + str(err)) from err
+        msg.body = new_body
+        msg.html = None
+        msg.attachments = []
+        for (filename, content_type, data) in sealed:
+            msg.attach(filename, content_type, data)
     if dry_run:
         success = False
     if success:

@@ -36,6 +36,13 @@ Branch `jacob/maintained` is the working branch. It tracks
   assembly. `exit`/`logout` variants keep their submit buttons — they
   destroy the session server-side, so a link would skip that. A link
   click also skips answer recording; session checkout runs by lock expiry.
+- **Encrypted email** (upstream #445 S/MIME, #288 PGP): `send_email`
+  gains `smime_encrypt_for=` (recipient PEM certificates) and
+  `pgp_encrypt_for=` (armored public keys). Body, HTML, and attachments
+  are sealed into one part (`smime.p7m` via the cryptography library, or
+  gpg-armored `message.asc`); a missing or unparseable certificate/key
+  raises before anything reaches a mail provider — never a plaintext
+  fallback. Implementation in `docassemble/base/email_crypto.py`.
 - **Clearer API error**: when a plain dict still breaks assembly, the error
   names the variable and links `session_post_objects`.
 

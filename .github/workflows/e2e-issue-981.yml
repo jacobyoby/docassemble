@@ -111,12 +111,20 @@ jobs:
           docker cp .github/workflows/e2e/test_issue_968.yml da:"$D/test_issue_968.yml"
           bash .github/workflows/e2e/issue_968_repro.sh http://localhost:8080 da expect-fail
 
-      - name: Install this branch's util.py and restart
+      - name: Install this branch's util.py and email_crypto.py, restart
         run: |
           U=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/base/util.py")
           docker cp docassemble_base/docassemble/base/util.py da:"$U"
+          B=$(docker exec da bash -c "ls -d /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/base")
+          docker cp docassemble_base/docassemble/base/email_crypto.py da:"$B/email_crypto.py"
           docker exec da bash -c "supervisorctl restart uwsgi"
           sleep 30
+
+      - name: Email encryption roundtrips with real keys, fails closed on bad ones
+        run: |
+          docker cp .github/workflows/e2e/email_crypto_check.py da:/tmp/email_crypto_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/email_crypto_check.py
 
       - name: Issue-968 - patched server must report the real attribute
         run: bash .github/workflows/e2e/issue_968_repro.sh http://localhost:8080 da expect-pass
