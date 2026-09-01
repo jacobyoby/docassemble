@@ -1,0 +1,39 @@
+# jacobyoby/docassemble — fork state
+
+Branch `jacob/maintained` is the working branch. It tracks
+`jhpyle/docassemble` master and carries, beyond upstream:
+
+- **Bool config crash fix** (upstream #980, PR #983 pending): `str()` guard
+  in `docassemble_base/docassemble/base/parse.py` so a YAML boolean in
+  `main page title url opens in other window` cannot break every interview.
+- **Plain-dict conversion** (upstream #981; upstream declined in PR #984 —
+  object notation is the documented mechanism): `POST /api/session` converts
+  a non-empty all-bool plain dict to a gathered `DADict`.
+- **Clearer API error**: when a plain dict still breaks assembly, the error
+  names the variable and links `session_post_objects`.
+
+## Test harness (`.github/workflows/`)
+
+`e2e-issue-981.yml` boots the real `jhpyle/docassemble:latest` container on
+every push to `jacob/maintained` and runs, in order: a fail-first control for
+each fix on the unpatched release, this branch's files installed into the
+container, an API suite (`e2e/e2e_suite.py`, stdlib only), and an ALKiln
+browser scenario (`e2e/sources/`) driving the checkboxes interview through
+headless Chrome. Supporting scripts live in `.github/workflows/e2e/` with
+their own doc comments.
+
+Run the API suite against any server:
+
+    python3 .github/workflows/e2e/e2e_suite.py <base_url> <api_key>
+
+## Issues
+
+The fork's issue tracker mirrors upstream's open issues (attributed in each
+body, upstream links in code spans so copies never ping upstream). Issues
+fixed on this branch are closed here even while open upstream.
+
+## Staying current
+
+    git fetch upstream
+    git rebase upstream/master jacob/maintained
+    git push -f origin jacob/maintained
