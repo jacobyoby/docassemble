@@ -510,7 +510,7 @@ def do_sms(form, base_url, url_root, config='default', save=True):
                     # There is a real value here
                     if hasattr(field, 'datatype') and field.datatype in ('object_multiselect', 'object_checkboxes'):
                         true_values = set()
-                        for selection in re.split(r' *[,;] *', inp_lower):
+                        for selection in re.split(r'(?> *)[,;](?> *)', inp_lower):
                             for potential_abb, value in cdata['abblower'].items():
                                 if selection and selection.startswith(potential_abb):
                                     for choice in choice_list:
@@ -529,7 +529,7 @@ def do_sms(form, base_url, url_root, config='default', save=True):
                             user_dict['_internal']['command_cache'][field.number].append(the_string)
                     elif hasattr(field, 'datatype') and field.datatype in ('multiselect', 'checkboxes'):
                         true_values = set()
-                        for selection in re.split(r' *[,;] *', inp_lower):
+                        for selection in re.split(r'(?> *)[,;](?> *)', inp_lower):
                             for potential_abb, value in cdata['abblower'].items():
                                 if selection and selection.startswith(potential_abb):
                                     for choice in choice_list:

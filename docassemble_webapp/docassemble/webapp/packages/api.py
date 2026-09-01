@@ -150,7 +150,7 @@ def api_package():
                 packagename = re.sub(r'^git+', '', packagename)
                 packagename = re.sub(r'#.*', '', packagename)
                 packagename = re.sub(r'\.git$', '', packagename)
-                packagename = re.sub(r'.*/', '', packagename)
+                packagename = packagename.rpartition('/')[2]
                 packagename = re.sub(r'^docassemble-', 'docassemble.', packagename)
             if user_can_edit_package(giturl=github_url) and user_can_edit_package(pkgname=packagename):
                 install_git_package(packagename, github_url, branch)
