@@ -1,5 +1,5 @@
 <IfModule mod_ssl.c>
-    <VirtualHost *:443>
+    <VirtualHost *:${DAHTTPSLISTENPORT}>
         ServerAdmin ${DASERVERADMIN}
         ServerName ${DAHOSTNAME}
         SSLEngine on

@@ -17,6 +17,10 @@ Branch `jacob/maintained` is the working branch. It tracks
   currency_code='EUR')` formats through `babel.numbers.format_currency` —
   thread-safe, per-currency decimal conventions (JPY gets none), optional
   `locale` keyword for number style. The default path is unchanged.
+- **Configurable HTTPS port** (upstream #801): `HTTPSPORT` env var
+  parametrizes the Apache `Listen` line and the SSL vhost (via a
+  `DAHTTPSLISTENPORT` Define), defaulting to 443 — rootless Podman can
+  bind an unprivileged port. Existing installs keep their copied vhost.
 - **Clearer API error**: when a plain dict still breaks assembly, the error
   names the variable and links `session_post_objects`.
 
