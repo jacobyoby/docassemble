@@ -47,6 +47,7 @@ from pygments.formatters.html import HtmlFormatter
 from pygments.lexers import YamlLexer  # pylint: disable=no-name-in-module
 from sqlalchemy import select, or_, and_
 import werkzeug
+import werkzeug.utils
 from docassemble_flask_user import login_required, roles_required
 from docassemble.base.error import DAError, DAException
 from docassemble.base.functions import bytesyaml, altyamlstring, serializable_dict
@@ -1471,8 +1472,8 @@ def playground_static(current_project, userid, filename):
     area = SavedFile(userid, fix=True, section='playgroundstatic')
     the_directory = directory_for(area, current_project)
     filename = filename.replace('/', os.path.sep)
-    path = os.path.join(the_directory, filename)
-    if os.path.join('..', '') in path:
+    path = werkzeug.utils.safe_join(the_directory, filename)
+    if path is None:
         return ('File not found', 404)
     if os.path.isfile(path):
         filename = os.path.basename(filename)
@@ -1499,8 +1500,8 @@ def playground_modules(current_project, userid, filename):
     area = SavedFile(userid, fix=True, section='playgroundmodules')
     the_directory = directory_for(area, current_project)
     filename = filename.replace('/', os.path.sep)
-    path = os.path.join(the_directory, filename)
-    if os.path.join('..', '') in path:
+    path = werkzeug.utils.safe_join(the_directory, filename)
+    if path is None:
         return ('File not found', 404)
     if os.path.isfile(path):
         filename = os.path.basename(filename)
@@ -1529,8 +1530,8 @@ def playground_sources(current_project, userid, filename):
     area = SavedFile(userid, fix=True, section='playgroundsources')
     write_ml_source(area, userid, current_project, filename)
     the_directory = directory_for(area, current_project)
-    path = os.path.join(the_directory, filename)
-    if os.path.join('..', '') in path:
+    path = werkzeug.utils.safe_join(the_directory, filename)
+    if path is None:
         return ('File not found', 404)
     if os.path.isfile(path):
         filename = os.path.basename(filename)
@@ -1558,8 +1559,8 @@ def playground_template(current_project, userid, filename):
     area = SavedFile(userid, fix=True, section='playgroundtemplate')
     the_directory = directory_for(area, current_project)
     filename = filename.replace('/', os.path.sep)
-    path = os.path.join(the_directory, filename)
-    if os.path.join('..', '') in path:
+    path = werkzeug.utils.safe_join(the_directory, filename)
+    if path is None:
         return ('File not found', 404)
     if os.path.isfile(path):
         filename = os.path.basename(filename)
@@ -1583,8 +1584,8 @@ def playground_download(current_project, userid, filename):
     area = SavedFile(userid, fix=True, section='playground')
     the_directory = directory_for(area, current_project)
     filename = filename.replace('/', os.path.sep)
-    path = os.path.join(the_directory, filename)
-    if os.path.join('..', '') in path:
+    path = werkzeug.utils.safe_join(the_directory, filename)
+    if path is None:
         return ('File not found', 404)
     if os.path.isfile(path):
         filename = os.path.basename(filename)

@@ -6,6 +6,7 @@ import os
 from urllib.parse import quote as urllibquote
 from urllib.request import urlretrieve
 import zipfile
+import werkzeug.utils
 import tailer
 import humanize
 import httplib2
@@ -36,8 +37,8 @@ logs_bp = Blueprint(
 def logfile(filename):
     filename = secure_filename_spaces_ok(filename)
     if LOGSERVER is None:
-        the_file = os.path.join(LOG_DIRECTORY, filename)
-        if not os.path.isfile(the_file):
+        the_file = werkzeug.utils.safe_join(LOG_DIRECTORY, filename)
+        if the_file is None or not os.path.isfile(the_file):
             return ('File not found', 404)
     else:
         h = httplib2.Http()
@@ -107,7 +108,11 @@ def logs():
             else:
                 the_file = files[0]
         if the_file is not None:
-            filename = os.path.join(LOG_DIRECTORY, the_file)
+            # the_file went through secure_filename_spaces_ok above;
+            # safe_join makes the containment locally checkable.
+            filename = werkzeug.utils.safe_join(LOG_DIRECTORY, the_file)
+            if filename is None:
+                return ('File not found', 404)
         else:
             filename = ''
     else:
