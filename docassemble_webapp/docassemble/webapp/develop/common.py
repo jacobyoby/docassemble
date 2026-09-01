@@ -22,7 +22,7 @@ def get_repo_info(giturl):
     else:
         access_token = None
     repo_name = re.sub(r'^git\+', '', repo_name)
-    repo_name = re.sub(r'^http.*github.com/', '', repo_name)
+    repo_name = re.sub(r'^http.*github\.com/', '', repo_name)
     repo_name = re.sub(r'.*@github.com:', '', repo_name)
     repo_name = re.sub(r'[@#].*', '', repo_name)
     repo_name = re.sub(r'.git$', '', repo_name)

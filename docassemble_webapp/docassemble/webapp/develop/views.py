@@ -2194,13 +2194,13 @@ def do_playground_pull(area, current_project, github_url=None, branch=None, pypi
     expected_name = 'unknown'
     if github_url:
         github_url = re.sub(r'[^A-Za-z0-9\-\.\_\~\:\/\#\[\]\@\$\+\,\=]', '', github_url)
-        repo_name = re.sub(r'/*$', '', github_url)
-        repo_name = re.sub(r'^http.*github.com/', '', repo_name)
-        repo_name = re.sub(r'.*@github.com:', '', repo_name)
+        repo_name = github_url.rstrip('/')
+        repo_name = re.sub(r'^http.*github\.com/', '', repo_name)
+        repo_name = re.sub(r'.*@github\.com:', '', repo_name)
         repo_name = re.sub(r'.git$', '', repo_name)
         if 'x-oauth-basic@github.com' not in github_url and can_publish_to_github and github_email:
             github_url = f'git@github.com:{repo_name}.git'
-            expected_name = re.sub(r'.*/', '', github_url)
+            expected_name = github_url.rpartition('/')[2]
             expected_name = re.sub(r'\.git', '', expected_name)
             expected_name = re.sub(r'docassemble-', '', expected_name)
             (private_key_file, public_key_file) = get_ssh_keys(github_email)
@@ -2222,7 +2222,7 @@ def do_playground_pull(area, current_project, github_url=None, branch=None, pypi
         else:
             if not github_url.startswith('http'):
                 github_url = f'https://github.com/{repo_name}'
-            expected_name = re.sub(r'.*/', '', github_url)
+            expected_name = github_url.rpartition('/')[2]
             expected_name = re.sub(r'\.git', '', expected_name)
             expected_name = re.sub(r'docassemble-', '', expected_name)
             try:

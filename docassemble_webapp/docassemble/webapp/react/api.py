@@ -246,7 +246,7 @@ def api_interview():
             if not current_app.config['ENABLE_PLAYGROUND']:
                 return jsonify_with_status(word("Not authorized"), 403)
         else:
-            yaml_filename = re.sub(r':([^\/]+)$', r':data/questions/\1', yaml_filename)
+            yaml_filename = re.sub(r':(?>([^\/]+))$', r':data/questions/\1', yaml_filename)
         interview = get_interview(yaml_filename)
         if session_id is None:
             if need_to_reset and yaml_filename in user_info['sessions']:

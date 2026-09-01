@@ -80,6 +80,7 @@ from docassemble.webapp.users.models import (
 )
 from docassemble.webapp.utils.encryption import decrypt_phrase, decrypt_dictionary
 from docassemble.webapp.utils.helpers import (
+    make_safe_url,
     _call_or_get,
     _endpoint_url,
     _get_safe_next_param,
@@ -494,7 +495,7 @@ def invite():
             flash(word('Invitations have been sent.'), 'success')
         else:
             flash(word('Invitation has been sent.'), 'success')
-        return redirect(the_next)
+        return redirect(make_safe_url(the_next))
     if invite_form.role_id.data is None:
         invite_form.role_id.process_data(str(user_role.id))
     response = make_response(render_template('flask_user/invite.html', version_warning=None, bodyclass='daadminbody', page_title=word('Invite User'), tab_title=word('Invite User'), form=invite_form), 200)

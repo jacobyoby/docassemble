@@ -47,7 +47,7 @@ from docassemble.webapp.lock import release_lock
 from docassemble.webapp.mail.da_flask_mail import Message
 from docassemble.webapp.mail.hooks import da_send_mail
 from docassemble.webapp.translations import setup_translation
-from docassemble.webapp.utils.helpers import noquote, get_requester_ip
+from docassemble.webapp.utils.helpers import noquote, get_requester_ip, make_safe_url
 from docassemble.webapp.utils.hooks import url_for
 from docassemble.webapp.utils.logger import logmessage
 
@@ -207,7 +207,7 @@ def init_app(app):
                 referer = None
             if referer and referer != 'None':
                 flash(word("Input not processed because the page expired."), "success")
-                return redirect(referer)
+                return redirect(make_safe_url(referer))
         return server_error(the_error)
 
 

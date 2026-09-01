@@ -173,7 +173,7 @@ def observer():
         "daGaIds": None,
         "daDoAction": None,
         "daInterviewPackage": re.sub(r'^docassemble\.', '', re.sub(r':.*', '', i)),
-        "daInterviewFilename": re.sub(r'\.ya?ml$', '', re.sub(r'.*[:\/]', '', i), re.IGNORECASE),
+        "daInterviewFilename": re.sub(r'\.ya?ml$', '', re.search(r'[^:/]*$', i).group(), re.IGNORECASE),
         "daQuestionID": {'id': obj['question_id']},
         "daInterviewUrl": url_for('interview.index', i=i),
         "daLocationBar": url_for('interview.index', i=i),

@@ -85,11 +85,11 @@ def api_playground_pull():
             packagename = re.sub(r'&.*', '', m.group(1))
             github_url = re.sub(r'#.*', '', github_url)
         else:
-            packagename = re.sub(r'/*$', '', github_url)
+            packagename = github_url.rstrip('/')
             packagename = re.sub(r'^git+', '', packagename)
             packagename = re.sub(r'#.*', '', packagename)
             packagename = re.sub(r'\.git$', '', packagename)
-            packagename = re.sub(r'.*/', '', packagename)
+            packagename = packagename.rpartition('/')[2]
             packagename = re.sub(r'^docassemble-', 'docassemble.', packagename)
     elif 'pip' in post_data:
         m = re.match(r'([^>=<]+)([>=<]+.+)', post_data['pip'])

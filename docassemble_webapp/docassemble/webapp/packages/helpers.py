@@ -172,14 +172,14 @@ def pypi_status(packagename):
 
 def get_branches_of_repo(giturl):
     repo_name = giturl.rstrip('/')
-    m = re.search(r'//(.+):x-oauth-basic@github.com', repo_name)
+    m = re.search(r'//(.+):x-oauth-basic@github\.com', repo_name)
     if m:
         access_token = m.group(1)
     else:
         access_token = None
     repo_name = re.sub(r'^git\+', '', repo_name)
-    repo_name = re.sub(r'^http.*github.com/', '', repo_name)
-    repo_name = re.sub(r'.*@github.com:', '', repo_name)
+    repo_name = re.sub(r'^http.*github\.com/', '', repo_name)
+    repo_name = re.sub(r'.*@github\.com:', '', repo_name)
     repo_name = re.sub(r'[@#].*', '', repo_name)
     repo_name = re.sub(r'.git$', '', repo_name)
     if current_app.config['ENABLE_PLAYGROUND'] and current_app.config['USE_GITHUB']:

@@ -605,7 +605,7 @@ def index(action_argument=None, refer=None):
             if not current_app.config['ENABLE_PLAYGROUND']:
                 raise DAError(word("Not authorized"), code=403)
         else:
-            yaml_filename = re.sub(r':([^\/]+)$', r':data/questions/\1', yaml_filename)
+            yaml_filename = re.sub(r':(?>([^\/]+))$', r':data/questions/\1', yaml_filename)
             this_thread.current_info['yaml_filename'] = yaml_filename
         show_flash = False
         interview = get_interview(yaml_filename)
