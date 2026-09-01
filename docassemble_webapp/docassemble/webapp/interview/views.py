@@ -1044,7 +1044,7 @@ def index(action_argument=None, refer=None):
                         attachment_info.append({'filename': str(the_attachment['filename']) + '.' + str(extension_of_doc_format.get(the_format, the_format)), 'number': the_attachment['file'][the_format], 'mimetype': the_attachment['mimetype'][the_format], 'attachment': the_attachment})
                     attached_file_count += 1
             worker_key = 'da:worker:uid:' + str(user_code) + ':i:' + str(yaml_filename) + ':userid:' + str(the_user_id)
-            for email_address in re.split(r' *[,;] *', attachment_email_address):
+            for email_address in re.split(r'(?> *)[,;](?> *)', attachment_email_address):
                 try:
                     result = celery_app.signature('tasks.email_attachments', args=[user_code, email_address, attachment_info, get_language()], kwargs={'subject': interview_status.extras.get('email_subject', None), 'body': interview_status.extras.get('email_body', None), 'html': interview_status.extras.get('email_html', None), 'config': interview.consolidated_metadata.get('email config', None)}).delay()
                     r.rpush(worker_key, result.id)
@@ -2947,7 +2947,7 @@ def index(action_argument=None, refer=None):
             "daGaIds": ga_ids,
             "daDoAction": do_action,
             "daInterviewPackage": re.sub(r'^docassemble\.', '', re.sub(r':.*', '', yaml_filename)),
-            "daInterviewFilename": re.sub(r'\.ya?ml$', '', re.sub(r'.*[:\/]', '', yaml_filename), re.IGNORECASE),
+            "daInterviewFilename": re.sub(r'\.ya?ml$', '', re.search(r'[^:/]*$', yaml_filename).group(), re.IGNORECASE),
             "daQuestionID": question_id_dict,
             "daInterviewUrl": url_for('interview.index', **index_params),
             "daLocationBar": location_bar,
