@@ -1210,14 +1210,9 @@ class DAObject:
 
     def __getattr__(self, thename):
         if thename.startswith('__') or hasattr(self.__class__, thename):
-            if 'pending_error' in this_thread.misc:
-                pending_error = this_thread.misc['pending_error']
-                del this_thread.misc['pending_error']
-                raise pending_error
             return object.__getattribute__(self, thename)
         var_name = object.__getattribute__(self, 'instanceName') + "." + thename
-        this_thread.misc['pending_error'] = DAAttributeError("name '" + var_name + "' is not defined")
-        raise this_thread.misc['pending_error']
+        raise DAAttributeError("name '" + var_name + "' is not defined")
 
     def raise_undefined_attribute_error(self, thename):
         """Raise a DAAttributeError for the named attribute, as if the attribute were undefined.

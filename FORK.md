@@ -9,6 +9,10 @@ Branch `jacob/maintained` is the working branch. It tracks
 - **Plain-dict conversion** (upstream #981; upstream declined in PR #984 —
   object notation is the documented mechanism): `POST /api/session` converts
   a non-empty all-bool plain dict to a gathered `DADict`.
+- **Stale hasattr error fix** (upstream #968): `DAObject.__getattr__` no
+  longer parks a `pending_error` in thread state for dunder lookups to
+  replay; a `hasattr()` probe on an undefined attribute can no longer
+  misattribute a later, unrelated error to the probed variable.
 - **Clearer API error**: when a plain dict still breaks assembly, the error
   names the variable and links `session_post_objects`.
 

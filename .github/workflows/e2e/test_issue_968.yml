@@ -1,0 +1,9 @@
+objects:
+  - test_obj: DAObject
+---
+mandatory: True
+question: |
+  Bug Reproduction
+subquestion: |
+  Step 1: ${ hasattr(test_obj, "nonexistent") }
+  Step 2: ${ test_obj.__custom__ }
