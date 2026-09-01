@@ -1,4 +1,5 @@
 import locale
+import babel.numbers
 from docassemble.base.hooks import get_configuration
 from docassemble.base.thread_context import this_thread
 from .control import get_locale
@@ -51,7 +52,8 @@ def currency_default(the_value, **kwargs):
     decimals = kwargs.get('decimals', True)
     symbol = kwargs.get('symbol', None)
     symbol_precedes = kwargs.get('symbol_precedes', None)
-    ensure_definition(the_value, decimals, symbol)
+    currency_code = kwargs.get('currency_code', None)
+    ensure_definition(the_value, decimals, symbol, currency_code)
     obj_type = type(the_value).__name__
     if obj_type in ['FinancialList', 'PeriodicFinancialList']:
         the_value = the_value.total()
@@ -67,6 +69,15 @@ def currency_default(the_value, **kwargs):
     except:
         return ''
     the_float_value = float(the_value)
+    if currency_code is not None:
+        # Thread-safe per-call formatting; the process-wide locale module
+        # cannot switch currencies within one document. Babel also knows
+        # each currency's decimal conventions (e.g. JPY has none).
+        config = get_configuration() or {}
+        babel_locale = kwargs.get('locale', config.get('babel currency locale', config.get('locale', 'en_US.utf8').split('.')[0]))
+        if decimals:
+            return babel.numbers.format_currency(the_float_value, currency_code, locale=babel_locale)
+        return babel.numbers.format_currency(int(the_float_value), currency_code, format='\u00a4#,##0', locale=babel_locale, currency_digits=False)
     the_symbol = None
     if symbol is not None:
         the_symbol = symbol

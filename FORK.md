@@ -13,6 +13,10 @@ Branch `jacob/maintained` is the working branch. It tracks
   longer parks a `pending_error` in thread state for dunder lookups to
   replay; a `hasattr()` probe on an undefined attribute can no longer
   misattribute a later, unrelated error to the probed variable.
+- **Babel-backed multi-currency** (upstream #343): `currency(value,
+  currency_code='EUR')` formats through `babel.numbers.format_currency` —
+  thread-safe, per-currency decimal conventions (JPY gets none), optional
+  `locale` keyword for number style. The default path is unchanged.
 - **Clearer API error**: when a plain dict still breaks assembly, the error
   names the variable and links `session_post_objects`.
 

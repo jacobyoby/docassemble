@@ -115,6 +115,19 @@ jobs:
       - name: Issue-968 - patched server must report the real attribute
         run: bash .github/workflows/e2e/issue_968_repro.sh http://localhost:8080 da expect-pass
 
+      - name: Issue-343 control - stock currency() must ignore currency_code
+        run: |
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          echo "PY=$PY" >> "$GITHUB_ENV"
+          docker cp .github/workflows/e2e/currency_check.py da:/tmp/currency_check.py
+          docker exec da "$PY" /tmp/currency_check.py expect-fail
+
+      - name: Issue-343 - babel-backed currency_code must format correctly
+        run: |
+          C=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/base/language/currency.py")
+          docker cp docassemble_base/docassemble/base/language/currency.py da:"$C"
+          docker exec da "$PY" /tmp/currency_check.py expect-pass
+
       - name: Issue-980 control - boolean config must crash the unpatched release
         run: |
           docker exec da bash -c "cp /usr/share/docassemble/config/config.yml /tmp/config.yml.bak && printf '%s\n' 'main page title url opens in other window: False' >> /usr/share/docassemble/config/config.yml && supervisorctl restart uwsgi"
