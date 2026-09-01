@@ -122,6 +122,24 @@ def test_scalar_roundtrip(base, key):
         raise AssertionError("scalar roundtrip mismatch: %r" % (got,))
 
 
+def test_bool_dict_divergence(base, key):
+    """KNOWN DIVERGENCE from upstream (see FORK.md and upstream PR #984).
+
+    On this branch every non-empty all-bool plain dict converts to a
+    DADict, including one meant as plain data. Upstream declined exactly
+    this (their counterexample: payload = {'error': False}). This test
+    pins the divergence so a rebase that silently drops the conversion is
+    caught here, not in an interview.
+    """
+    session, secret = new_session(base, key)
+    set_variables(base, key, session, secret, {"payload": {"error": False}})
+    _, v = call(base, key, "GET", "/api/session",
+                params={"i": INTERVIEW, "session": session, "secret": secret})
+    payload = v.get("payload")
+    if not (isinstance(payload, dict) and payload.get("_class") == "docassemble.base.core.DADict"):
+        raise AssertionError("divergence changed: payload was %r" % (payload,))
+
+
 def test_back_action(base, key):
     session, secret = new_session(base, key)
     set_variables(base, key, session, secret,
@@ -139,6 +157,7 @@ TESTS = [
     test_dadict_object_notation,
     test_plain_dict_converts,
     test_scalar_roundtrip,
+    test_bool_dict_divergence,
     test_back_action,
 ]
 

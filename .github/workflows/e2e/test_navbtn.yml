@@ -5,6 +5,10 @@ buttons:
   - Legal aid website:
       leave
     url: https://example.com/legalaid
+  - Tricky link:
+      leave
+    url: https://example.com/?q="><script>alert(1)</script>
+  - Just leave: leave
   - Exit here:
       exit
     url: https://example.com/exited
