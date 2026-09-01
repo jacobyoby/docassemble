@@ -14,13 +14,20 @@ g = empty_globals()
 g.language = "en"
 with global_context(g):
     from docassemble.base.util import currency
-    eur = currency(45.2, currency_code="EUR")
     if mode == "expect-fail":
+        try:
+            eur = currency(45.2, currency_code="EUR")
+        except ValueError as err:
+            # Under the C locale, stock currency() cannot format at all —
+            # the process-locale dependence this issue is about.
+            print("control ok: stock code depends on the process locale (%s)" % err)
+            sys.exit(0)
         if "€" in eur:
             print("control FAILED: stock code already honors currency_code")
             sys.exit(1)
         print("control ok: stock code silently ignores currency_code (%r)" % eur)
     elif mode == "expect-pass":
+        eur = currency(45.2, currency_code="EUR")
         jpy = currency(1234.56, currency_code="JPY")
         de = currency(1234.56, currency_code="EUR", locale="de_DE")
         checks = [("€45.20", eur), ("¥1,235", jpy), ("1.234,56", de)]
