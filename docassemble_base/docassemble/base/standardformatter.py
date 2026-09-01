@@ -6,6 +6,7 @@ import codecs
 import datetime
 import locale
 from io import StringIO
+import html
 from html.parser import HTMLParser
 from docassemble.base.functions import (
     get_currency_symbol,
@@ -2224,7 +2225,13 @@ def as_html(status, debug, root, validation_rules, field_error, the_progress_bar
                         elif choice['key'].question_type == "logout":
                             btn_class = ' ' + BUTTON_STYLE + BUTTON_COLOR_LOGOUT
                     # output += '                  <input type="hidden" name="_event" value=' + myb64doublequote(json.dumps(list(status.question.fields_used))) + ' />\n'
-                    output += '                  <button type="submit" class="btn ' + BUTTON_CLASS + btn_class + css_class + '" name="X211bHRpcGxlX2Nob2ljZQ" value="' + str(indexno) + '">' + the_icon + markdown_to_html(choice['label'], status=status, trim=True, do_terms=False, strip_newlines=True) + '</button>\n'
+                    if choice.get('link_url'):
+                        # Navigation-purpose choice: a real link styled as a
+                        # button, per accessibility guidance. The URL was
+                        # evaluated when the screen was assembled.
+                        output += '                  <a href="' + html.escape(choice['link_url'], quote=True) + '" rel="noopener" class="btn ' + BUTTON_CLASS + btn_class + css_class + '">' + the_icon + markdown_to_html(choice['label'], status=status, trim=True, do_terms=False, strip_newlines=True) + '</a>\n'
+                    else:
+                        output += '                  <button type="submit" class="btn ' + BUTTON_CLASS + btn_class + css_class + '" name="X211bHRpcGxlX2Nob2ljZQ" value="' + str(indexno) + '">' + the_icon + markdown_to_html(choice['label'], status=status, trim=True, do_terms=False, strip_newlines=True) + '</button>\n'
                     indexno += 1
             output += additional_buttons_after
             output += help_button

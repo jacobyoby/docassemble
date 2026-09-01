@@ -30,6 +30,12 @@ Branch `jacob/maintained` is the working branch. It tracks
   tag-style autocomplete via vendored Tom Select 2.4.3 (Apache-2.0,
   `static/tom-select/`), lazy-loaded per page. Form encoding and server
   processing are unchanged; without the input type nothing differs.
+- **Navigation buttons are links** (upstream #845): a `leave` buttons
+  choice with a `url` renders as a real `<a href rel="noopener">` styled
+  identically to the button it replaces, with the URL evaluated at screen
+  assembly. `exit`/`logout` variants keep their submit buttons — they
+  destroy the session server-side, so a link would skip that. A link
+  click also skips answer recording; session checkout runs by lock expiry.
 - **Clearer API error**: when a plain dict still breaks assembly, the error
   names the variable and links `session_post_objects`.
 

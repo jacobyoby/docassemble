@@ -99,6 +99,12 @@ jobs:
       - name: Full API suite
         run: python3 .github/workflows/e2e/e2e_suite.py http://localhost:8080 "$KEY"
 
+      - name: Issue-845 control - navigation button must be a submit button on the unpatched release
+        run: |
+          D=$(docker exec da bash -c "ls -d /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/demo/data/questions")
+          docker cp .github/workflows/e2e/test_navbtn.yml da:"$D/test_navbtn.yml"
+          bash .github/workflows/e2e/issue_845_repro.sh http://localhost:8080 expect-fail
+
       - name: Issue-968 control - stale hasattr error must be misattributed on the unpatched release
         run: |
           D=$(docker exec da bash -c "ls -d /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/demo/data/questions")
@@ -165,6 +171,9 @@ jobs:
           export PUPPETEER_EXECUTABLE_PATH="$(command -v google-chrome-stable || command -v google-chrome || command -v chromium-browser)"
           npm install --no-fund --no-audit --ignore-scripts puppeteer-core@24.23.0
           node .github/workflows/e2e/tomselect_check.js
+
+      - name: Issue-845 - navigation renders as a link once parse.py and the formatter are installed
+        run: bash .github/workflows/e2e/issue_845_repro.sh http://localhost:8080 expect-pass
 
       - name: Browser e2e via ALKiln
         run: |

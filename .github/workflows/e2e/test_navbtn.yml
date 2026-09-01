@@ -1,0 +1,11 @@
+mandatory: True
+question: |
+  You cannot continue
+buttons:
+  - Legal aid website:
+      leave
+    url: https://example.com/legalaid
+  - Exit here:
+      exit
+    url: https://example.com/exited
+  - Restart: restart

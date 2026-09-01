@@ -1373,6 +1373,23 @@ class InterviewStatus:
 # increment_question_counter = new_counter()
 
 
+
+def add_link_url(choice_item, user_dict):
+    """Resolve a navigation choice's target URL at render time.
+
+    Only 'leave' qualifies: it navigates away and keeps the session, so a
+    real link (styled as a button) is its honest element, per accessibility
+    guidance. exit/logout variants destroy the session server-side and must
+    remain submit buttons. The link click skips the answer-recording POST;
+    the session's checkout runs by lock expiry rather than immediately.
+    """
+    the_key = choice_item.get('key')
+    if isinstance(the_key, Question) and getattr(the_key, 'question_type', None) == 'leave' and hasattr(the_key, 'content') and str(the_key.content.original_text).strip() != '':
+        the_url = the_key.content.text(user_dict).strip()
+        if the_url != '':
+            choice_item['link_url'] = the_url
+
+
 class TextObject:
 
     def __deepcopy__(self, memo):
@@ -6213,6 +6230,7 @@ class Question:
                                     new_item = {'key': candidate['key'].text(user_dict), 'label': candidate['label'].text(user_dict)}
                                 else:
                                     new_item = {'key': candidate['key'], 'label': candidate['label'].text(user_dict)}
+                                    add_link_url(new_item, user_dict)
                                 if 'image' in candidate:
                                     new_item['image'] = evaluate_image_in_item(candidate['image'], user_dict)
                                 for sub_item in ('help', 'css class', 'color', 'default', 'group'):
@@ -6230,6 +6248,7 @@ class Question:
                                     new_item = {'key': item['key'].text(user_dict), 'label': item['label'].text(user_dict)}
                                 else:
                                     new_item = {'key': item['key'], 'label': item['label'].text(user_dict)}
+                                    add_link_url(new_item, user_dict)
                                 if 'image' in item:
                                     new_item['image'] = evaluate_image_in_item(item['image'], user_dict)
                                 for sub_item in ('help', 'css class', 'color', 'default', 'group'):
@@ -6258,6 +6277,7 @@ class Question:
                                 new_item['key'] = item['key'].text(user_dict)
                             else:
                                 new_item['key'] = item['key']
+                                add_link_url(new_item, user_dict)
                             new_item['label'] = item['label'].text(user_dict)
                             showif = True
                             if 'show if' in item:
@@ -6283,6 +6303,7 @@ class Question:
                                 new_item['key'] = item['key'].text(user_dict)
                             else:
                                 new_item['key'] = item['key']
+                                add_link_url(new_item, user_dict)
                             showif = True
                             if 'show if' in item:
                                 showif = bool(eval(item['show if'], user_dict))
