@@ -2967,8 +2967,8 @@ def playground_packages():
     if github_message is not None and old_info.get('github_branch', None) and (github_http or github_url_from_file):
         html_url = github_http or github_url_from_file
         commit_code = None
-        current_commit_file = os.path.join(directory_for(area['playgroundpackages'], current_project), '.' + github_package_name)
-        if os.path.isfile(current_commit_file):
+        current_commit_file = werkzeug.utils.safe_join(directory_for(area['playgroundpackages'], current_project), '.' + github_package_name)
+        if current_commit_file is not None and os.path.isfile(current_commit_file):
             with open(current_commit_file, 'r', encoding='utf-8') as fp:
                 commit_code = fp.read().strip()
             if current_user.timezone:
@@ -4418,8 +4418,8 @@ def create_playground_package():
         github_auth = None
     area = {}
     area['playgroundpackages'] = SavedFile(playground_user.id, fix=True, section='playgroundpackages')
-    if os.path.isfile(os.path.join(directory_for(area['playgroundpackages'], current_project), 'docassemble.' + current_package)):
-        filename = os.path.join(directory_for(area['playgroundpackages'], current_project), 'docassemble.' + current_package)
+    filename = werkzeug.utils.safe_join(directory_for(area['playgroundpackages'], current_project), 'docassemble.' + current_package)
+    if filename is not None and os.path.isfile(filename):
         info = {}
         with open(filename, 'r', encoding='utf-8') as fp:
             content = fp.read()
@@ -4541,8 +4541,8 @@ def create_playground_package():
                 file_list[sec] = sorted([f for f in os.listdir(the_directory) if os.path.isfile(os.path.join(the_directory, f)) and re.search(r'^[A-Za-z0-9]', f)])
             else:
                 file_list[sec] = []
-        if os.path.isfile(os.path.join(directory_for(area['playgroundpackages'], current_project), 'docassemble.' + current_package)):
-            filename = os.path.join(directory_for(area['playgroundpackages'], current_project), 'docassemble.' + current_package)
+        filename = werkzeug.utils.safe_join(directory_for(area['playgroundpackages'], current_project), 'docassemble.' + current_package)
+        if filename is not None and os.path.isfile(filename):
             info = {}
             with open(filename, 'r', encoding='utf-8') as fp:
                 content = fp.read()
@@ -4605,8 +4605,8 @@ def create_playground_package():
                     logmessage("Not checking for stored commit code because no target repository exists")
                     pulled_already = False
                 else:
-                    current_commit_file = os.path.join(directory_for(area['playgroundpackages'], current_project), '.' + github_package_name)
-                    if os.path.isfile(current_commit_file):
+                    current_commit_file = werkzeug.utils.safe_join(directory_for(area['playgroundpackages'], current_project), '.' + github_package_name)
+                    if current_commit_file is not None and os.path.isfile(current_commit_file):
                         with open(current_commit_file, 'r', encoding='utf-8') as fp:
                             commit_code = fp.read()
                         commit_code = commit_code.strip()
