@@ -1,0 +1,17 @@
+question: |
+  Which fruits?
+fields:
+  - Fruits: fruit
+    datatype: multiselect
+    input type: autocomplete
+    choices:
+      - apple
+      - banana
+      - cherry
+      - dragonfruit
+---
+mandatory: True
+question: |
+  Result
+subquestion: |
+  You chose ${ fruit.true_values() }.

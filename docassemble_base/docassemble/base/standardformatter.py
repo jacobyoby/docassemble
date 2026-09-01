@@ -2798,6 +2798,29 @@ def input_for(status, field, embedded=False, floating_label=None):
         elif using_shuffle:
             random.shuffle(pairlist)
         if field.datatype in ['multiselect', 'object_multiselect']:
+            if hasattr(field, 'inputtype') and field.inputtype == 'autocomplete' and not embedded:
+                # Enhance the plain multiple-select with a tag-style
+                # autocomplete (vendored Tom Select), loaded lazily so pages
+                # without such a field pay nothing. The underlying <select
+                # multiple> keeps its name and options, so form submission
+                # and server-side processing are unchanged.
+                status.extra_scripts.append({"type": "custom", "script": (
+                    "(function(){"
+                    "var sel=document.getElementById(" + json.dumps(saveas_string) + ");"
+                    "if(!sel){return;}"
+                    "function initTS(){new TomSelect(sel,{plugins:['remove_button'],maxItems:null});}"
+                    "if(window.TomSelect){initTS();return;}"
+                    "var probe=document.querySelector('script[src*=\"/static/app/\"]');"
+                    "var base=probe?probe.src.replace(/static\\/app\\/.*/,'static/'):'/static/';"
+                    "if(!document.getElementById('da-tom-select-css')){"
+                    "var l=document.createElement('link');l.id='da-tom-select-css';l.rel='stylesheet';"
+                    "l.href=base+'tom-select/css/tom-select.bootstrap5.min.css';document.head.appendChild(l);}"
+                    "var s=document.getElementById('da-tom-select-js');"
+                    "if(s){s.addEventListener('load',initTS);return;}"
+                    "s=document.createElement('script');s.id='da-tom-select-js';"
+                    "s.src=base+'tom-select/js/tom-select.complete.min.js';s.onload=initTS;"
+                    "document.head.appendChild(s);})();"
+                )})
             if field.datatype == 'object_multiselect':
                 is_object = True
                 daobject = ' damultiselect daobject'

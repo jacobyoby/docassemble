@@ -152,6 +152,20 @@ jobs:
         with:
           node-version: "24.x"
 
+      - name: Multiselect autocomplete browser e2e
+        run: |
+          SF=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/base/standardformatter.py")
+          docker cp docassemble_base/docassemble/base/standardformatter.py da:"$SF"
+          ST=$(docker exec da bash -c "ls -d /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp/static")
+          docker cp docassemble_webapp/docassemble/webapp/static/tom-select da:"$ST/tom-select"
+          D=$(docker exec da bash -c "ls -d /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/demo/data/questions")
+          docker cp .github/workflows/e2e/test_autocomplete.yml da:"$D/test_autocomplete.yml"
+          docker exec da bash -c "supervisorctl restart uwsgi"
+          sleep 30
+          export PUPPETEER_EXECUTABLE_PATH="$(command -v google-chrome-stable || command -v google-chrome || command -v chromium-browser)"
+          npm install --no-fund --no-audit --ignore-scripts puppeteer-core@24.23.0
+          node .github/workflows/e2e/tomselect_check.js
+
       - name: Browser e2e via ALKiln
         run: |
           npm install -g --ignore-scripts "@suffolklitlab/alkiln@^5.0.0"

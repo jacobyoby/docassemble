@@ -25,6 +25,11 @@ Branch `jacob/maintained` is the working branch. It tracks
   OAuth credentials no longer downgrade silently to unauthenticated,
   rate-limited API calls; the server says to reconnect GitHub, and the
   package pages show "Unable to fetch branches" instead of stalling.
+- **Multiselect autocomplete** (upstream #280): `datatype: multiselect`
+  with `input type: autocomplete` renders the plain multiple-select as a
+  tag-style autocomplete via vendored Tom Select 2.4.3 (Apache-2.0,
+  `static/tom-select/`), lazy-loaded per page. Form encoding and server
+  processing are unchanged; without the input type nothing differs.
 - **Clearer API error**: when a plain dict still breaks assembly, the error
   names the variable and links `session_post_objects`.
 
