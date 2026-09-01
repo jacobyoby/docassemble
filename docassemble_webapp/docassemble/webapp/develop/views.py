@@ -3484,8 +3484,10 @@ def rename_project(user_id, old_name, new_name):
     fix_package_folder()
     for sec in ('', 'sources', 'static', 'template', 'modules', 'packages'):
         area = SavedFile(user_id, fix=True, section='playground' + sec)
-        if os.path.isdir(os.path.join(area.directory, old_name)):
-            os.rename(os.path.join(area.directory, old_name), os.path.join(area.directory, new_name))
+        old_path = werkzeug.utils.safe_join(area.directory, old_name)
+        new_path = werkzeug.utils.safe_join(area.directory, new_name)
+        if old_path is not None and new_path is not None and os.path.isdir(old_path):
+            os.rename(old_path, new_path)
             area.finalize()
 
 
@@ -3493,7 +3495,9 @@ def create_project(user_id, new_name):
     fix_package_folder()
     for sec in ('', 'sources', 'static', 'template', 'modules', 'packages'):
         area = SavedFile(user_id, fix=True, section='playground' + sec)
-        new_dir = os.path.join(area.directory, new_name)
+        new_dir = werkzeug.utils.safe_join(area.directory, new_name)
+        if new_dir is None:
+            continue
         if not os.path.isdir(new_dir):
             os.makedirs(new_dir, exist_ok=True)
         path = os.path.join(new_dir, '.placeholder')
@@ -4638,7 +4642,9 @@ def create_playground_package():
                 # else:
                 #     branch_option = '-b ' + commit_branch + ' '
                 tempbranch = 'playground' + random_string(5)
-                packagedir = os.path.join(directory, 'docassemble-' + str(pkgname))
+                packagedir = werkzeug.utils.safe_join(directory, 'docassemble-' + str(pkgname))
+                if packagedir is None:
+                    raise DAError('invalid package name')
                 the_user_name = str(playground_user.first_name) + " " + str(playground_user.last_name)
                 if the_user_name == ' ':
                     the_user_name = 'Anonymous User'
@@ -5068,7 +5074,9 @@ class Fruit(DAObject):
         return "Yum, that " + self.name + " was good!"
 """
         directory = tempfile.mkdtemp(prefix='SavedFile')
-        packagedir = os.path.join(directory, 'docassemble-' + str(pkgname))
+        packagedir = werkzeug.utils.safe_join(directory, 'docassemble-' + str(pkgname))
+        if packagedir is None:
+            raise DAError('invalid package name')
         questionsdir = os.path.join(packagedir, 'docassemble', str(pkgname), 'data', 'questions')
         templatesdir = os.path.join(packagedir, 'docassemble', str(pkgname), 'data', 'templates')
         staticdir = os.path.join(packagedir, 'docassemble', str(pkgname), 'data', 'static')
