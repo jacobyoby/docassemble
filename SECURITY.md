@@ -1,3 +1,13 @@
+## This fork
+
+For vulnerabilities in **docassemble itself**, follow the upstream process
+below — upstream is the authoritative codebase and fixes land there first.
+
+For vulnerabilities in **fork-only code** (the divergent lines listed in
+[FORK.md](FORK.md) and the `.github/workflows/` harness), use GitHub's
+private vulnerability reporting on this repository ("Report a
+vulnerability" under the Security tab). Do not open a public issue.
+
 ## Reporting security issues
 
 To report a security issue, email jhpyle@gmail.com and include the
