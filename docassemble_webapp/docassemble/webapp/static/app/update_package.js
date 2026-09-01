@@ -11,6 +11,14 @@ function get_branches() {
   }
   $.get(daGetGitBranches, { url: github_url }, "json").done(function (data) {
     //console.log(data);
+    if (!data.success) {
+      elem.empty();
+      opt = $("<option></option>");
+      opt.attr("value", "").text("Unable to fetch branches");
+      elem.append(opt);
+      console.error("get_branches failed: " + data.reason);
+      return;
+    }
     if (data.success) {
       var n = data.result.length;
       if (n > 0) {

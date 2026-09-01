@@ -21,6 +21,10 @@ Branch `jacob/maintained` is the working branch. It tracks
   parametrizes the Apache `Listen` line and the SSL vhost (via a
   `DAHTTPSLISTENPORT` Define), defaulting to 443 — rootless Podman can
   bind an unprivileged port. Existing installs keep their copied vhost.
+- **Branch selector failure surfaced** (upstream #915): expired GitHub
+  OAuth credentials no longer downgrade silently to unauthenticated,
+  rate-limited API calls; the server says to reconnect GitHub, and the
+  package pages show "Unable to fetch branches" instead of stalling.
 - **Clearer API error**: when a plain dict still breaks assembly, the error
   names the variable and links `session_post_objects`.
 

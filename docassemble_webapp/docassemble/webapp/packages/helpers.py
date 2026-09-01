@@ -190,9 +190,11 @@ def get_branches_of_repo(giturl):
         storage = RedisCredStorage(oauth_app='github')
         credentials = storage.get()
         if not credentials or credentials.invalid:
-            http = httplib2.Http()
-        else:
-            http = credentials.authorize(httplib2.Http())
+            # Falling back to unauthenticated requests here hits GitHub's
+            # per-IP rate limit and 404s on private repositories, so the
+            # branch selector silently stops updating. Say what happened.
+            raise DAException("Stored GitHub credentials are missing or invalid; disconnect and reconnect GitHub on your profile page")
+        http = credentials.authorize(httplib2.Http())
     else:
         http = httplib2.Http()
     the_url = "https://api.github.com/repos/" + repo_name + '/branches'
