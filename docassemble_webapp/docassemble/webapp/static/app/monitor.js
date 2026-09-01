@@ -75,7 +75,7 @@ window.daStopControlling = function (key) {
   // if (daControlling.hasOwnProperty(key)){
   //   delete daControlling[key];
   // }
-  var skey = key.replace(/(:|\.|\[|\]|,|=|\/)/g, "\\$1");
+  var skey = key.replace(/[^a-zA-Z0-9_-]/g, "\$&");
   $("#listelement" + skey)
     .find("a")
     .each(function () {
@@ -167,7 +167,7 @@ function daCheckNotifications() {
 }
 function daNotifyOperator(key, mode, message) {
   //console.log("daNotifyOperator: " + key + " " + mode + " " + message);
-  var skey = key.replace(/(:|\.|\[|\]|,|=|\/)/g, "\\$1");
+  var skey = key.replace(/[^a-zA-Z0-9_-]/g, "\$&");
   if (mode == "chat") {
     daPlaySound("newmessage");
   } else {
@@ -331,14 +331,14 @@ function daIsHidden(ref) {
 }
 function daMarkAsUpdated(key) {
   //console.log("daMarkAsUpdated with " + key);
-  var skey = key.replace(/(:|\.|\[|\]|,|=|\/)/g, "\\$1");
+  var skey = key.replace(/[^a-zA-Z0-9_-]/g, "\$&");
   if (daIsHidden("#listelement" + skey)) {
     daUpdatedSessions["#listelement" + skey] = 1;
   }
 }
 function daActivateChatArea(key) {
   //console.log("daActivateChatArea with " + key);
-  var skey = key.replace(/(:|\.|\[|\]|,|=|\/)/g, "\\$1");
+  var skey = key.replace(/[^a-zA-Z0-9_-]/g, "\$&");
   if (
     !$("#chatarea" + skey)
       .find("input")
@@ -363,7 +363,7 @@ function daActivateChatArea(key) {
 }
 function daDeActivateChatArea(key) {
   //console.log("daActivateChatArea with " + key);
-  var skey = key.replace(/(:|\.|\[|\]|,|=|\/)/g, "\\$1");
+  var skey = key.replace(/[^a-zA-Z0-9_-]/g, "\$&");
   $("#chatarea" + skey)
     .find("input, button")
     .prop("disabled", true);
@@ -375,7 +375,7 @@ function daDeActivateChatArea(key) {
 }
 function daUndrawSession(key) {
   //console.log("Undrawing...");
-  var skey = key.replace(/(:|\.|\[|\]|,|=|\/)/g, "\\$1");
+  var skey = key.replace(/[^a-zA-Z0-9_-]/g, "\$&");
   var xButton = document.createElement("a");
   var xButtonIcon = document.createElement("i");
   $(xButton).addClass("dacorner-remove");
@@ -433,7 +433,7 @@ function daPublishChatLog(uid, yaml_filename, userid, mode, messages, scroll) {
   //}
   for (var i = 0; i < keys.length; ++i) {
     key = keys[i];
-    var skey = key.replace(/(:|\.|\[|\]|,|=|\/)/g, "\\$1");
+    var skey = key.replace(/[^a-zA-Z0-9_-]/g, "\$&");
     var chatArea = $("#chatarea" + skey)
       .find("ul")
       .first();
@@ -466,7 +466,7 @@ function daCheckIfEmpty() {
 }
 function daDrawSession(key, obj) {
   //console.log("daDrawSession with " + key);
-  var skey = key.replace(/(:|\.|\[|\]|,|=|\/)/g, "\\$1");
+  var skey = key.replace(/[^a-zA-Z0-9_-]/g, "\$&");
   var the_html;
   var wants_to_chat;
   if (obj.chatstatus != "off") {
@@ -999,7 +999,7 @@ function daReadyFunction() {
       }
       for (var i = 0; i < keys.length; ++i) {
         key = keys[i];
-        var skey = key.replace(/(:|\.|\[|\]|,|=|\/)/g, "\\$1");
+        var skey = key.replace(/[^a-zA-Z0-9_-]/g, "\$&");
         //console.log("Received chat message for #chatarea" + skey);
         var chatArea = $("#chatarea" + skey)
           .find("ul")
@@ -1085,7 +1085,7 @@ function daReadyFunction() {
       }
       for (var i = 0; i < data.availRoles.length; ++i) {
         var key = data.availRoles[i];
-        var skey = key.replace(/(:|\.|\[|\]|,|=|\/| )/g, "\\$1");
+        var skey = key.replace(/[^a-zA-Z0-9_-]/g, "\$&");
         if ($("#role" + skey).length == 0) {
           var div = document.createElement("div");
           $(div).addClass("form-check form-check-inline");

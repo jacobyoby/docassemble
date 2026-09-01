@@ -41898,7 +41898,7 @@ function setField(fieldName, theValue) {
   } else if ($(elem).attr("type") == "radio") {
     var fieldNameEscaped = $(elem)
       .attr("name")
-      .replace(/(:|\.|\[|\]|,|=)/g, "\\$1");
+      .replace(/[^a-zA-Z0-9_-]/g, "\$&");
     var wasSet = false;
     if (theValue === true) {
       theValue = "True";
@@ -42049,7 +42049,7 @@ function val(fieldName) {
   } else if ($(elem).attr("type") == "radio") {
     var fieldNameEscaped = $(elem)
       .attr("name")
-      .replace(/(:|\.|\[|\]|,|=)/g, "\\$1");
+      .replace(/[^a-zA-Z0-9_-]/g, "\$&");
     theVal = $("input[name='" + fieldNameEscaped + "']:checked").val();
     if (typeof theVal == "undefined") {
       theVal = null;
@@ -43012,7 +43012,7 @@ function daValidationHandler(form) {
     var namesWithImages = Object();
     for (var i = 0; i < file_list.length; i++) {
       var the_file_input = $(
-        "#" + file_list[i].replace(/(:|\.|\[|\]|,|=|\/|\")/g, "\\$1"),
+        "#" + file_list[i].replace(/[^a-zA-Z0-9_-]/g, "\$&"),
       )[0];
       var the_max_size = $(the_file_input).data("maximagesize");
       var the_image_type = $(the_file_input).data("imagetype");
@@ -43055,7 +43055,7 @@ function daValidationHandler(form) {
         fileArray.values[inline_file_list[i]] = Array();
         var fileInfoList = fileArray.values[inline_file_list[i]];
         var file_input = $(
-          "#" + inline_file_list[i].replace(/(:|\.|\[|\]|,|=|\/|\")/g, "\\$1"),
+          "#" + inline_file_list[i].replace(/[^a-zA-Z0-9_-]/g, "\$&"),
         )[0];
         var max_size;
         var image_type;
@@ -44221,15 +44221,15 @@ function daObserverSubmitter(event) {
   } else if (embeddedAction) {
     skey =
       'a[data-embaction="' +
-      embeddedAction.replace(/(:|\.|\[|\]|,|=|\/|\")/g, "\\$1") +
+      embeddedAction.replace(/[^a-zA-Z0-9_-]/g, "\$&") +
       '"]';
   } else if (theAction) {
     skey =
       'a[data-action="' +
-      theAction.replace(/(:|\.|\[|\]|,|=|\/|\")/g, "\\$1") +
+      theAction.replace(/[^a-zA-Z0-9_-]/g, "\$&") +
       '"]';
   } else if (theId) {
-    skey = "#" + theId.replace(/(:|\.|\[|\]|,|=|\/|\")/g, "\\$1");
+    skey = "#" + theId.replace(/[^a-zA-Z0-9_-]/g, "\$&");
   } else if (theName) {
     skey =
       "#" +
@@ -44237,7 +44237,7 @@ function daObserverSubmitter(event) {
       " " +
       $(this).prop("tagName").toLowerCase() +
       '[name="' +
-      theName.replace(/(:|\.|\[|\]|,|=|\/)/g, "\\$1") +
+      theName.replace(/[^a-zA-Z0-9_-]/g, "\$&") +
       '"]';
     if (typeof theValue !== "undefined") {
       skey += '[value="' + theValue + '"]';
@@ -45846,10 +45846,7 @@ function daInitialize(doScroll) {
     jsInfo["vars"].forEach(function (infoItem, i) {
       var showIfVars = [];
       var initShowIfVar = utoa(infoItem).replace(/[\n=]/g, "");
-      var initShowIfVarEscaped = initShowIfVar.replace(
-        /(:|\.|\[|\]|,|=)/g,
-        "\\$1",
-      );
+      var initShowIfVarEscaped = initShowIfVar.replace(/[^a-zA-Z0-9_-]/g, "\$&");
       var elem = $("[name='" + initShowIfVarEscaped + "']");
       if (elem.length > 0) {
         showIfVars.push(initShowIfVar);
@@ -45857,10 +45854,7 @@ function daInitialize(doScroll) {
       if (daVarLookupMulti.hasOwnProperty(initShowIfVar)) {
         for (var j = 0; j < daVarLookupMulti[initShowIfVar].length; j++) {
           var altShowIfVar = daVarLookupMulti[initShowIfVar][j];
-          var altShowIfVarEscaped = altShowIfVar.replace(
-            /(:|\.|\[|\]|,|=)/g,
-            "\\$1",
-          );
+          var altShowIfVarEscaped = altShowIfVar.replace(/[^a-zA-Z0-9_-]/g, "\$&");
           var altElem = $("[name='" + altShowIfVarEscaped + "']");
           if (altElem.length > 0 && !$.contains(this, altElem[0])) {
             showIfVars.push(altShowIfVar);
@@ -45871,7 +45865,7 @@ function daInitialize(doScroll) {
         console.log("ERROR: reference to non-existent field " + infoItem);
       }
       showIfVars.forEach(function (showIfVar) {
-        var showIfVarEscaped = showIfVar.replace(/(:|\.|\[|\]|,|=)/g, "\\$1");
+        var showIfVarEscaped = showIfVar.replace(/[^a-zA-Z0-9_-]/g, "\$&");
         var varToUse = infoItem;
         var showHideDiv = function (speed) {
           var elem = daGetField(varToUse);
@@ -46083,10 +46077,7 @@ function daInitialize(doScroll) {
         }
       });
     } else {
-      var initShowIfVarEscaped = initShowIfVar.replace(
-        /(:|\.|\[|\]|,|=)/g,
-        "\\$1",
-      );
+      var initShowIfVarEscaped = initShowIfVar.replace(/[^a-zA-Z0-9_-]/g, "\$&");
       elem = $("[name='" + initShowIfVarEscaped + "']");
     }
     if (elem.length > 0) {
@@ -46096,10 +46087,7 @@ function daInitialize(doScroll) {
       var n = daVarLookupMulti[initShowIfVar].length;
       for (var i = 0; i < n; i++) {
         var altShowIfVar = daVarLookupMulti[initShowIfVar][i];
-        var altShowIfVarEscaped = altShowIfVar.replace(
-          /(:|\.|\[|\]|,|=)/g,
-          "\\$1",
-        );
+        var altShowIfVarEscaped = altShowIfVar.replace(/[^a-zA-Z0-9_-]/g, "\$&");
         var altElem = $("[name='" + altShowIfVarEscaped + "']");
         if (altElem.length > 0 && !$.contains(this, altElem[0])) {
           showIfVars.push(altShowIfVar);
@@ -46110,7 +46098,7 @@ function daInitialize(doScroll) {
     var saveAs = $(this).data("saveas");
     var showIfDiv = this;
     showIfVars.forEach(function (showIfVar) {
-      var showIfVarEscaped = showIfVar.replace(/(:|\.|\[|\]|,|=)/g, "\\$1");
+      var showIfVarEscaped = showIfVar.replace(/[^a-zA-Z0-9_-]/g, "\$&");
       var showHideDiv = function (speed) {
         var elem = daGetField(varName, showIfDiv);
         if (
@@ -47050,7 +47038,7 @@ function daAddListenersFor(elementId) {
     }
     if (n) {
       for (var i = 0; i < n; ++i) {
-        var theElementId = id_list[i].replace(/(:|\.|\[|\]|,|=)/g, "\\$1");
+        var theElementId = id_list[i].replace(/[^a-zA-Z0-9_-]/g, "\$&");
         if (theVal == null || theVal == "") {
           daDisableIfNotHidden(
             "#daform [name='" + theElementId + "']:not([type=hidden])",
