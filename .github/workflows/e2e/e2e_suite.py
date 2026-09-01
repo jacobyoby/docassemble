@@ -136,7 +136,10 @@ def test_bool_dict_divergence(base, key):
     _, v = call(base, key, "GET", "/api/session",
                 params={"i": INTERVIEW, "session": session, "secret": secret})
     payload = v.get("payload")
-    if not (isinstance(payload, dict) and payload.get("_class") == "docassemble.base.core.DADict"):
+    # The read-back class is reported as docassemble.base.util.DADict
+    # (an alias of the core class), so match on the class name, not the
+    # module, to stay robust to that aliasing.
+    if not (isinstance(payload, dict) and str(payload.get("_class", "")).endswith(".DADict")):
         raise AssertionError("divergence changed: payload was %r" % (payload,))
 
 
