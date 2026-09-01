@@ -86,14 +86,31 @@ jobs:
         if: env.ALREADY_FIXED != '1'
         run: bash .github/workflows/e2e/issue_981_repro.sh http://localhost:8080 "$KEY" expect-fail
 
-      - name: Install this branch's helpers.py and restart
+      - name: Install this branch's helpers.py, allow demo interviews, restart
         run: |
           docker cp docassemble_webapp/docassemble/webapp/interview/helpers.py da:"$F"
+          docker exec da bash -c "grep -q '^allow demo' /usr/share/docassemble/config/config.yml || echo 'allow demo: True' >> /usr/share/docassemble/config/config.yml"
           docker exec da bash -c "supervisorctl restart uwsgi"
           sleep 30
 
       - name: Patched server must convert the plain dict to DADict
         run: bash .github/workflows/e2e/issue_981_repro.sh http://localhost:8080 "$KEY" expect-pass
 
-      - name: Full e2e suite
+      - name: Full API suite
         run: python3 .github/workflows/e2e/e2e_suite.py http://localhost:8080 "$KEY"
+
+      - name: Set up node for ALKiln
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.x"
+
+      - name: Browser e2e via ALKiln
+        run: |
+          npm install -g --ignore-scripts "@suffolklitlab/alkiln@^5.0.0"
+          export PUPPETEER_EXECUTABLE_PATH="$(command -v google-chrome-stable || command -v google-chrome || command -v chromium-browser)"
+          export BASE_URL=http://localhost:8080
+          export SERVER_URL=http://localhost:8080
+          export DOCASSEMBLE_DEVELOPER_API_KEY="$KEY"
+          export REPO_URL="${{ github.server_url }}/${{ github.repository }}"
+          export BRANCH_NAME="${{ github.ref_name }}"
+          alkiln-run "" --sources=.github/workflows/e2e/sources
