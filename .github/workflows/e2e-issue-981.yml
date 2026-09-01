@@ -94,3 +94,6 @@ jobs:
 
       - name: Patched server must convert the plain dict to DADict
         run: bash .github/workflows/e2e/issue_981_repro.sh http://localhost:8080 "$KEY" expect-pass
+
+      - name: Full e2e suite
+        run: python3 .github/workflows/e2e/e2e_suite.py http://localhost:8080 "$KEY"
