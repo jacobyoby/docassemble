@@ -599,10 +599,18 @@ def set_session_variables(yaml_filename, session_id, variables, secret=None, ret
                     interview.assemble(user_dict, interview_status)
             except BaseException as err:
                 raise DAException("Error processing session: " + err.__class__.__name__ + ": " + str(err)) from err
+        dict_valued_keys = set(key for key, val in variables.items() if type(val) is dict and len(val) > 0 and all(isinstance(item, bool) for item in val.values()))  # pylint: disable=unidiomatic-typecheck
         try:
             for key, val in variables.items():
                 if illegal_variable_name(key):
                     raise DAException("Illegal value as variable name.")
+                if key in dict_valued_keys and key != '_xxxtempvarxxx':
+                    exec('import docassemble.base.util', user_dict)
+                    user_dict['_xxxtempvarxxx'] = copy.deepcopy(val)
+                    exec(str(key) + ' = docassemble.base.util.DADict(' + repr(str(key)) + ', auto_gather=False, gathered=True, elements=_xxxtempvarxxx)', user_dict)
+                    del user_dict['_xxxtempvarxxx']
+                    process_set_variable(str(key), user_dict, vars_set, old_values)
+                    continue
                 if isinstance(val, (str, bool, int, float, NoneType)):
                     exec(str(key) + ' = ' + repr(val), user_dict)
                 else:
