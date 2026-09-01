@@ -12,6 +12,9 @@ on:
   push:
     branches: [jacob/maintained]
 
+permissions:
+  contents: read
+
 jobs:
   checkboxes-dadict:
     runs-on: ubuntu-latest
