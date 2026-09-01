@@ -171,7 +171,7 @@ def pypi_status(packagename):
 
 
 def get_branches_of_repo(giturl):
-    repo_name = re.sub(r'/*$', '', giturl)
+    repo_name = giturl.rstrip('/')
     m = re.search(r'//(.+):x-oauth-basic@github.com', repo_name)
     if m:
         access_token = m.group(1)

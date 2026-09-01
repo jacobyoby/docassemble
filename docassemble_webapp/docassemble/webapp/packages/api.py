@@ -146,7 +146,7 @@ def api_package():
                 packagename = re.sub(r'&.*', '', m.group(1))
                 github_url = re.sub(r'#.*', '', github_url)
             else:
-                packagename = re.sub(r'/*$', '', github_url)
+                packagename = github_url.rstrip('/')
                 packagename = re.sub(r'^git+', '', packagename)
                 packagename = re.sub(r'#.*', '', packagename)
                 packagename = re.sub(r'\.git$', '', packagename)
