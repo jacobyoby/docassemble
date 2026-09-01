@@ -2278,7 +2278,7 @@ def do_playground_pull(area, current_project, github_url=None, branch=None, pypi
             return {'action': 'error', 'message': "error downloading PyPI package.  " + str(err)}
         try:
             tar = tarfile.open(package_file.name)
-            tar.extractall(path=directory)
+            tar.extractall(path=directory, filter='data')
             tar.close()
         except BaseException as err:
             return {'action': 'error', 'message': "error unpacking PyPI package.  " + str(err)}
