@@ -60,6 +60,11 @@ Run the API suite against any server:
 
     python3 .github/workflows/e2e/e2e_suite.py <base_url> <api_key>
 
+The browser tooling (ALKiln, the puppeteer checks) requires Node 24 —
+Node 26 breaks cucumber's yargs loader (extensionless CJS parsed as
+ESM). CI pins 24 via setup-node and `.nvmrc` records it; on a Mac with
+a newer default node, use `/opt/homebrew/opt/node@24/bin/node`.
+
 ## Issues
 
 The fork's issue tracker mirrors upstream's open issues (attributed in each
