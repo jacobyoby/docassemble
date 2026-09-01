@@ -688,7 +688,12 @@ def set_session_variables(yaml_filename, session_id, variables, secret=None, ret
             try:
                 data = get_question_data(yaml_filename, session_id, secret, use_lock=False, user_dict=user_dict, steps=steps, is_encrypted=is_encrypted, post_setting=post_setting, advance_progress_meter=advance_progress_meter, encode=encode)
             except BaseException as the_err:
-                raise DAException("Problem getting current question:" + str(the_err)) from the_err
+                err_text = str(the_err)
+                if "'dict' object has no attribute" in err_text:
+                    dict_vars = [key for key, val in variables.items() if type(val) is dict]  # pylint: disable=unidiomatic-typecheck
+                    if len(dict_vars) > 0:
+                        raise DAException("Problem getting current question:" + err_text + " (variable " + ", ".join(repr(str(var)) for var in dict_vars) + " was sent as a plain dictionary; a checkboxes or multiselect field needs a DADict, which the API accepts in object notation: https://docassemble.org/docs/api.html#session_post_objects)") from the_err
+                raise DAException("Problem getting current question:" + err_text) from the_err
         else:
             data = None
         if not return_question:
