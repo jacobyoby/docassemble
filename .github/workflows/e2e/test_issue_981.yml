@@ -1,0 +1,15 @@
+question: |
+  Which fruits?
+fields:
+  - Fruits: fruit
+    datatype: checkboxes
+    choices:
+      - apple
+      - banana
+      - cherry
+---
+mandatory: True
+question: |
+  Result
+subquestion: |
+  You chose ${ fruit.true_values() }.

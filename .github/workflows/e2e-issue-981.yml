@@ -1,0 +1,96 @@
+name: e2e issue-981 checkboxes DADict
+
+# Proves the fix in docassemble_webapp/docassemble/webapp/interview/helpers.py
+# end to end against the real server: POST /api/session with a plain dict for
+# a checkboxes field must fail on the unpatched release (control) and succeed
+# with DADict semantics once this branch's helpers.py is installed. The control
+# runs first so the test is known to detect the defect it guards against.
+# Supporting files live in .github/workflows/e2e/ — no heredocs in YAML run
+# blocks, because the stripped indentation breaks heredoc terminators.
+
+on:
+  push:
+    branches: [jacob/maintained]
+
+jobs:
+  checkboxes-dadict:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start docassemble container
+        run: |
+          docker run -d --name da -p 8080:80 jhpyle/docassemble:latest
+          # The image serves an HTTP 200 "Docassemble is starting" splash while
+          # it initializes, so readiness means 200 AND the splash is gone.
+          ready=0
+          for i in $(seq 1 150); do
+            body=$(curl -s http://localhost:8080/ || true)
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/ || true)
+            if [ "$code" = "200" ] && ! echo "$body" | grep -q "is starting"; then
+              ready=1
+              echo "server ready after $((i*10))s"
+              break
+            fi
+            sleep 10
+          done
+          if [ "$ready" != "1" ]; then
+            echo "server still initializing after 25 minutes (last=$code)"
+            docker logs da | tail -50
+            exit 1
+          fi
+
+      - name: Locate installed helpers.py
+        run: |
+          F=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp/interview/helpers.py")
+          echo "F=$F" >> "$GITHUB_ENV"
+          if docker exec da grep -q dict_valued_keys "$F"; then
+            echo "release already contains the fix; control phase will be skipped"
+            echo "ALREADY_FIXED=1" >> "$GITHUB_ENV"
+          fi
+
+      - name: Wait for redis inside the container
+        run: |
+          for i in $(seq 1 60); do
+            if docker exec da redis-cli ping 2>/dev/null | grep -q PONG; then
+              echo "redis up after $((i*5))s"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "redis never answered PONG"
+          docker exec da supervisorctl status || true
+          exit 1
+
+      - name: Install test interview and API key
+        run: |
+          D=$(docker exec da bash -c "ls -d /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/demo/data/questions")
+          docker cp .github/workflows/e2e/test_issue_981.yml da:"$D/test_issue_981.yml"
+          docker cp .github/workflows/e2e/mkkey.py da:/tmp/mkkey.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          KEY=""
+          for i in $(seq 1 5); do
+            KEY=$(docker exec da "$PY" /tmp/mkkey.py 2>/dev/null | tail -1)
+            [ -n "$KEY" ] && break
+            sleep 10
+          done
+          if [ -z "$KEY" ]; then
+            echo "mkkey.py produced no key after 5 attempts; last attempt with errors:"
+            docker exec da "$PY" /tmp/mkkey.py || true
+            exit 1
+          fi
+          echo "KEY=$KEY" >> "$GITHUB_ENV"
+
+      - name: Control - unpatched release must reject the plain dict
+        if: env.ALREADY_FIXED != '1'
+        run: bash .github/workflows/e2e/issue_981_repro.sh http://localhost:8080 "$KEY" expect-fail
+
+      - name: Install this branch's helpers.py and restart
+        run: |
+          docker cp docassemble_webapp/docassemble/webapp/interview/helpers.py da:"$F"
+          docker exec da bash -c "supervisorctl restart uwsgi"
+          sleep 30
+
+      - name: Patched server must convert the plain dict to DADict
+        run: bash .github/workflows/e2e/issue_981_repro.sh http://localhost:8080 "$KEY" expect-pass
