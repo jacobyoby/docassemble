@@ -71,6 +71,16 @@ The fork's issue tracker mirrors upstream's open issues (attributed in each
 body, upstream links in code spans so copies never ping upstream). Issues
 fixed on this branch are closed here even while open upstream.
 
+## Code scanning
+
+CodeQL runs via advanced setup (`.github/workflows/codeql.yml` +
+`.github/codeql/codeql-config.yml`), not GitHub's default setup, so it
+can take path rules. The config runs `security-extended` on first-party
+source and excludes generated JS bundles (duplicates of the scanned
+`app/*.js` sources) and vendored libraries (labelauty, tom-select,
+bootstrap, jQuery, fontawesome, codemirror) which are upstream's to fix.
+Scans run on push/PR to master and jacob/maintained and weekly.
+
 ## Staying current
 
     git fetch upstream

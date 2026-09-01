@@ -1,0 +1,29 @@
+# CodeQL configuration for jacob/maintained.
+#
+# Scans first-party source with the security-extended suite, but excludes
+# vendored third-party libraries (not our code to fix) and generated
+# bundles (concatenations of already-scanned sources, so findings there
+# are duplicates of the source findings).
+name: "jacobyoby/docassemble CodeQL config"
+
+queries:
+  - uses: security-extended
+
+paths-ignore:
+  # Generated JS bundles — concatenations of app/*.js, scanned at source.
+  - '**/static/app/*.min.js'
+  - '**/static/app/bundle.js'
+  - '**/static/app/bundlenojquery.js'
+  - '**/static/app/bundlewrapjquery.js'
+  - '**/static/app/monitorbundle.js'
+  - '**/static/app/playgroundbundle.js'
+  - '**/static/app/adminbundle.js'
+  - '**/static/app/cm6.js'
+  # Vendored third-party libraries (upstream owns these).
+  - '**/static/labelauty/**'
+  - '**/static/tom-select/**'
+  - '**/static/bootstrap*/**'
+  - '**/static/jquery*'
+  - '**/static/jquery/**'
+  - '**/static/fontawesome/**'
+  - '**/static/codemirror/**'
