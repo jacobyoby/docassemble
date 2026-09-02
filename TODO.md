@@ -30,9 +30,13 @@ Tracked as GitHub issues on the fork, label `enhancement`.
 - [#16](https://github.com/jacobyoby/docassemble/issues/16) — closed: the
   Tom Select multiselect-autocomplete already does this.
 - [#17](https://github.com/jacobyoby/docassemble/issues/17) Cloudron
-  packaging for self-hosting (upstream #917).
-- [#19](https://github.com/jacobyoby/docassemble/issues/19) Page weight: 1.5 MB FontAwesome + 259 KB admin bundle load
-  on every public page. ~3-6 hrs.
+  packaging for self-hosting (upstream #917). Not verifiable without a
+  Cloudron instance; left open.
+- **Interview bundle split** — `bundle.min.js` (983 KB: jQuery, Bootstrap,
+  validate, fileinput, labelauty, socket.io, app.js) is now the whole
+  remaining weight of a public interview page after the FontAwesome swap
+  (#19). Splitting it is a large refactor with every widget depending on
+  it; measure with pagesize_check.sh before/after. Half a day+.
 
 ## Fork maintenance
 

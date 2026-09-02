@@ -105,6 +105,9 @@ jobs:
       - name: Issue-15 control - SEO head tags and sitemap must be absent on the unpatched release
         run: bash .github/workflows/e2e/seo_check.sh http://localhost:8080 expect-fail
 
+      - name: Issue-19 control - unpatched release must ship the 1.5 MB FontAwesome JS
+        run: bash .github/workflows/e2e/pagesize_check.sh http://localhost:8080 expect-fail
+
       - name: Issue-18 control - a11y fixes must be absent on the unpatched release
         run: bash .github/workflows/e2e/a11y_check.sh http://localhost:8080 expect-fail
 
@@ -207,6 +210,13 @@ jobs:
           docker exec da bash -c "supervisorctl restart uwsgi"
           sleep 30
           bash .github/workflows/e2e/seo_check.sh http://localhost:8080 expect-pass
+
+      - name: Issue-19 - install FontAwesome CSS build; JS bundle gone, page weight must drop
+        run: |
+          WB=$(docker exec da bash -c "ls -d /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp")
+          docker cp docassemble_webapp/docassemble/webapp/static/fontawesome/css da:"$WB/static/fontawesome/css"
+          docker cp docassemble_webapp/docassemble/webapp/static/fontawesome/webfonts da:"$WB/static/fontawesome/webfonts"
+          bash .github/workflows/e2e/pagesize_check.sh http://localhost:8080 expect-pass
 
       - name: Set up node for ALKiln
         uses: actions/setup-node@v4
