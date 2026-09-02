@@ -105,6 +105,13 @@ jobs:
       - name: Issue-15 control - SEO head tags and sitemap must be absent on the unpatched release
         run: bash .github/workflows/e2e/seo_check.sh http://localhost:8080 expect-fail
 
+      - name: NFC control - stock PDF fill must lose the combining accent (NFD stays NFD)
+        run: |
+          docker cp .github/workflows/e2e/nfc_form.pdf da:/tmp/nfc_form.pdf
+          docker cp .github/workflows/e2e/nfc_check.py da:/tmp/nfc_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/nfc_check.py /tmp/nfc_form.pdf fileNum expect-fail
+
       - name: Issue-19 control - unpatched release must ship the 1.5 MB FontAwesome JS
         run: bash .github/workflows/e2e/pagesize_check.sh http://localhost:8080 expect-fail
 
@@ -217,6 +224,13 @@ jobs:
           docker cp docassemble_webapp/docassemble/webapp/static/fontawesome/css da:"$WB/static/fontawesome/css"
           docker cp docassemble_webapp/docassemble/webapp/static/fontawesome/webfonts da:"$WB/static/fontawesome/webfonts"
           bash .github/workflows/e2e/pagesize_check.sh http://localhost:8080 expect-pass
+
+      - name: NFC - install this branch's pdftk.py; accented names must fill as NFC
+        run: |
+          B=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/base/pdftk.py")
+          docker cp docassemble_base/docassemble/base/pdftk.py da:"$B"
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/nfc_check.py /tmp/nfc_form.pdf fileNum expect-pass
 
       - name: Set up node for ALKiln
         uses: actions/setup-node@v4

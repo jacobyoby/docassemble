@@ -3,6 +3,7 @@ import tempfile
 import shutil
 import re
 import os
+import unicodedata
 import string
 import codecs
 import logging
@@ -216,6 +217,14 @@ def fill_template(template, data_strings=None, data_names=None, hidden=None, rea
         data_strings = new_data_strings
     data_dict = {}
     for key, val in data_strings:
+        # Normalise to NFC before the XFDF write. NFD input (routine from
+        # macOS/iOS dictation, option-key entry, and Apple copy-paste, and not
+        # normalised by browsers on submit) loses its combining marks in the
+        # fill, so an accented name renders without its accents: a misspelled
+        # legal name on a court filing with no error and nothing visible to
+        # the filer. NFC round-trips correctly; NFD does not.
+        if isinstance(val, str):
+            val = unicodedata.normalize("NFC", val)
         data_dict[key] = val
     pdf_file = tempfile.NamedTemporaryFile(prefix="datemp", mode="wb", suffix=".pdf", delete=False)
     if pdfa or not editable or use_pdftk:

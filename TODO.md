@@ -41,14 +41,25 @@ Tracked as GitHub issues on the fork, label `enhancement`.
 ## Ship the fork to forms.jacobrakai.org
 
 forms runs **stock** docassemble 1.10.7 + the NJForms pip package, not
-this fork (verified on the live interview head). A package cannot patch
-core, so nothing on this branch reaches production until the container
-is built from the fork image.
+this fork (verified on the live interview head). The whole
+`/usr/share/docassemble` tree, venv included, lives on the container
+volume, so a new *image* is masked by the existing venv and changes
+nothing. The delivery path is the one deploy.sh already uses for
+NJForms: `docker cp` the fork's `docassemble_base` and
+`docassemble_webapp` into the container and `pip install
+--force-reinstall` them into the venv.
 
-- [#20](https://github.com/jacobyoby/docassemble/issues/20) Fork-built image: GHCR build on green CI, recover the
-  live `docker run` args, dev first, then recreate the prod container on
-  the same `da_live` volume with the stock container kept for rollback.
-  ~3 hrs; steps 3–5 are production changes and wait for a go.
+- [x] **Port the container's hand-applied NFC fix** (pdftk.py normalises
+  to NFC before the XFDF write; accented names on court filings). Lived
+  only inside the container per infra/containerRebuildChecklist.md and
+  would have been overwritten by any core install. Now in the fork with
+  a fail-first check on a real NJ form (nfc_check.py).
+- [ ] [#20](https://github.com/jacobyoby/docassemble/issues/20) Ship core
+  via pip: dev container first, then prod, same volume, stock venv
+  snapshot kept for rollback. Re-apply checklist rows 2-3 (logrotate)
+  after any rebuild; they are /etc files, not Python.
+- [ ] Fork image on GHCR — for fresh volumes / disaster recovery only,
+  not the change-delivery path.
 
 ## Fork maintenance
 
