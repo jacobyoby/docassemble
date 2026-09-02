@@ -9,7 +9,9 @@
 #   social: {og: {locale: en_US}}      # og configured WITHOUT an image
 #
 # Assertions against the live interview page and sitemap:
-#   1. <meta name="description"> carries the interview's metadata description.
+#   1. <meta name="description"> carries the interview's metadata description,
+#      and appears exactly once (the site-wide social description must not
+#      be emitted alongside it).
 #   2. <link rel="canonical"> points at the clean interview entry URL.
 #   3. og:title is emitted even though no og:image is configured (ungated).
 #   4. /sitemap.xml lists the dispatch entry.
@@ -22,11 +24,12 @@ yaml="docassemble.demo:data/questions/test_seo.yml"
 page=$(curl -sL "$base/interview?i=$yaml")
 
 desc=$(echo "$page" | grep -c 'name="description" content="A test interview whose description must appear' || true)
+desc_total=$(echo "$page" | grep -c 'name="description"' || true)
 canon=$(echo "$page" | grep -c 'rel="canonical" href="' || true)
 og=$(echo "$page" | grep -c 'name="og:title"' || true)
 sitemap=$(curl -s "$base/sitemap.xml" | grep -cE '<loc>.*/start/seo/?</loc>' || true)
 
-echo "description=$desc canonical=$canon og:title=$og sitemap=$sitemap"
+echo "description=$desc (total description tags=$desc_total) canonical=$canon og:title=$og sitemap=$sitemap"
 
 case "$mode" in
   expect-fail)
@@ -36,7 +39,7 @@ case "$mode" in
     fi
     echo "control ok: all four absent on the unpatched release" ;;
   expect-pass)
-    if [ "$desc" -lt 1 ] || [ "$canon" -lt 1 ] || [ "$og" -lt 1 ] || [ "$sitemap" -lt 1 ]; then
+    if [ "$desc" -lt 1 ] || [ "$desc_total" != "1" ] || [ "$canon" -lt 1 ] || [ "$og" -lt 1 ] || [ "$sitemap" -lt 1 ]; then
       echo "FAIL: SEO fix not fully present"
       exit 1
     fi

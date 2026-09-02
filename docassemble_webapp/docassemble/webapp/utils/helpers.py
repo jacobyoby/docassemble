@@ -798,21 +798,25 @@ def standard_html_start(interview_language=DEFAULT_LANGUAGE, debug=False, bootst
         output += '\n    <link href="' + url_for('static', filename='app/pygments.min.css', v=da_version, _external=external) + '" rel="stylesheet">'
     page_title = page_title.replace('\n', ' ').replace('"', '&quot;').strip()
     for key, val in social.items():
-        if key not in ('twitter', 'og', 'fb'):
-            output += '\n    <meta name="' + key + '" content="' + social[key] + '">'
+        if key in ('twitter', 'og', 'fb', 'canonical'):
+            continue
+        if key == 'description' and description:
+            continue  # the interview's own description below replaces the site-wide one
+        output += '\n    <meta name="' + key + '" content="' + social[key] + '">'
     if 'description' in social:
         output += '\n    <meta itemprop="description" content="' + social['description'] + '">'
     # Search engines read <meta name="description">, not the schema.org
     # itemprop above. Prefer the interview's own metadata description, then
     # the site-wide social description.
-    meta_description = description if description else social.get('description')
-    if meta_description:
-        meta_description = str(meta_description).replace('\n', ' ').replace('"', '&quot;').strip()
+    if description:
+        meta_description = str(description).replace('\n', ' ').replace('"', '&quot;').strip()
         output += '\n    <meta name="description" content="' + meta_description + '">'
-    if yaml_filename:
+    if yaml_filename and 'canonical' not in social:
         # Interview URLs carry session/state params; canonical to the clean
-        # entry URL so every visit is not indexed as a duplicate page.
-        output += '\n    <link rel="canonical" href="' + url_for('interview.index', i=yaml_filename, _external=True) + '">'
+        # entry URL so every visit is not indexed as a duplicate page. Built
+        # from `url root`, not the request host, so dev and prod agree. A site
+        # that injects its own canonical sets social: canonical: <anything>.
+        output += '\n    <link rel="canonical" href="' + daconfig.get('url root', '').rstrip('/') + url_for('interview.index', i=yaml_filename) + '">'
     if 'image' in social:
         output += '\n    <meta itemprop="image" content="' + social['image'] + '">'
     if 'name' in social:
