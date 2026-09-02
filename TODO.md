@@ -55,9 +55,15 @@ NJForms: `docker cp` the fork's `docassemble_base` and
   would have been overwritten by any core install. Now in the fork with
   a fail-first check on a real NJ form (nfc_check.py).
 - [ ] [#20](https://github.com/jacobyoby/docassemble/issues/20) Ship core
-  via pip: dev container first, then prod, same volume, stock venv
-  snapshot kept for rollback. Re-apply checklist rows 2-3 (logrotate)
-  after any rebuild; they are /etc files, not Python.
+  via pip. Steps 1–2 done: `njCourtForms/tools/deployCore.sh` exists and
+  dev is verified at b6c46f8 (stamped). Step 3, prod, is ops' lane (rook)
+  on Jacob's word; the script refuses any sha but the stamped one.
+  Re-apply checklist rows 2-3 (logrotate) after any rebuild; they are
+  /etc files, not Python.
+- [ ] **forms-side dedupe once core ships** (njcourtforms-issues #41):
+  forms injects its own canonical and `nj-skip-link`; the fork now emits
+  both natively, so each appears twice on forms. Either drop the injected
+  ones or set `social: canonical:` — the on-page-SEO owner's call.
 - [ ] Fork image on GHCR — for fresh volumes / disaster recovery only,
   not the change-delivery path.
 
