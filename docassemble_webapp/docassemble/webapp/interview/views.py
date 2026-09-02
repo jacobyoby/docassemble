@@ -2947,7 +2947,7 @@ def index(action_argument=None, refer=None):
             "daGaIds": ga_ids,
             "daDoAction": do_action,
             "daInterviewPackage": re.sub(r'^docassemble\.', '', re.sub(r':.*', '', yaml_filename)),
-            "daInterviewFilename": re.sub(r'\.ya?ml$', '', re.search(r'[^:/]*$', yaml_filename).group(), re.IGNORECASE),
+            "daInterviewFilename": re.sub(r'\.ya?ml$', '', re.split(r'[:/]', yaml_filename)[-1], re.IGNORECASE),
             "daQuestionID": question_id_dict,
             "daInterviewUrl": url_for('interview.index', **index_params),
             "daLocationBar": location_bar,

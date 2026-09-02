@@ -404,7 +404,7 @@ def api_interview():
             output['setup']['googleApiKey'] = google_api_key
         if ga_configured and data['interview_options'].get('analytics on', True):
             interview_package = re.sub(r'^docassemble\.', '', re.sub(r':.*', '', yaml_filename))
-            interview_filename = re.sub(r'\.ya?ml$', '', re.search(r'[^:/]*$', yaml_filename).group(), re.IGNORECASE)
+            interview_filename = re.sub(r'\.ya?ml$', '', re.split(r'[:/]', yaml_filename)[-1], re.IGNORECASE)
             output['setup']['googleAnalytics'] = {'enable': True, 'ga_id': google_config.get('analytics id'), 'prefix': interview_package + '/' + interview_filename}
         else:
             output['setup']['googleAnalytics'] = {'enable': False}
