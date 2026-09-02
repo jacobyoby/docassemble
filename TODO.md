@@ -34,6 +34,10 @@ Tracked as GitHub issues on the fork, label `enhancement`.
   accumulates to a list (upstream #280).
 - [#17](https://github.com/jacobyoby/docassemble/issues/17) Cloudron
   packaging for self-hosting (upstream #917).
+- [#18](https://github.com/jacobyoby/docassemble/issues/18) Accessibility: skip link, 404 landmark + link home, print
+  stylesheet (WCAG 2.4.1). ~2 hrs.
+- [#19](https://github.com/jacobyoby/docassemble/issues/19) Page weight: 1.5 MB FontAwesome + 259 KB admin bundle load
+  on every public page. ~3-6 hrs.
 
 ## Fork maintenance
 
