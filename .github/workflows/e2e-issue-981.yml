@@ -205,6 +205,9 @@ jobs:
           docker cp docassemble_webapp/docassemble/webapp/static/app/app.css da:"$WB/static/app/app.css"
           docker cp docassemble_webapp/docassemble/webapp/static/app/app.min.css da:"$WB/static/app/app.min.css"
           docker cp docassemble_webapp/docassemble/webapp/interview/views.py da:"$WB/interview/views.py"
+          # interview/views.py passes description= to standard_html_start; the head
+          # builder that accepts it must land in the same step or the page 500s.
+          docker cp docassemble_webapp/docassemble/webapp/utils/helpers.py da:"$WB/utils/helpers.py"
           docker exec da bash -c "supervisorctl restart uwsgi"
           sleep 30
           bash .github/workflows/e2e/a11y_check.sh http://localhost:8080 expect-pass
