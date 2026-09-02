@@ -423,7 +423,9 @@ def sitemap():
             continue
         if interview.is_unlisted() or not interview.allowed_to_see_listed(is_anonymous=True):
             continue
-        urls.append(url_for('interview.redirect_to_interview', dispatch=key, _external=True))
+        # Built from url root, not the request scheme/host, so a plain-http hop
+        # behind a TLS-terminating proxy cannot emit http:// entries.
+        urls.append(daconfig.get('url root', '').rstrip('/') + url_for('interview.redirect_to_interview', dispatch=key))
     body = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
     for url in urls:
         body += '  <url><loc>' + url.replace('&', '&amp;') + '</loc></url>\n'
