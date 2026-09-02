@@ -1906,3 +1906,21 @@ div.da-grid-container > div.dafieldpart > div.da-field-checkboxes {
 }
 
 /*# sourceMappingURL=app.css.map */
+
+/* Print: self-represented litigants print question and summary pages to
+   bring to court. Drop the fixed navbar, its body padding, buttons, and the
+   footer so only the content prints. */
+@media print {
+  .danavbarcontainer,
+  .navbar,
+  .btn,
+  footer,
+  .dafooter {
+    display: none !important;
+  }
+  body.da-pad-for-navbar,
+  body.da-pad-for-footer {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+}

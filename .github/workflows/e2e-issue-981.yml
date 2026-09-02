@@ -85,6 +85,9 @@ jobs:
           fi
           echo "KEY=$KEY" >> "$GITHUB_ENV"
 
+      - name: Issue-18 control - a11y fixes must be absent on the unpatched release
+        run: bash .github/workflows/e2e/a11y_check.sh http://localhost:8080 expect-fail
+
       - name: Control - unpatched release must reject the plain dict
         if: env.ALREADY_FIXED != '1'
         run: bash .github/workflows/e2e/issue_981_repro.sh http://localhost:8080 "$KEY" expect-fail
@@ -163,6 +166,18 @@ jobs:
           bash .github/workflows/e2e/issue_980_repro.sh http://localhost:8080 da expect-pass
           docker exec da bash -c "cp /tmp/config.yml.bak /usr/share/docassemble/config/config.yml && supervisorctl restart uwsgi"
           sleep 30
+
+      - name: Issue-18 - install a11y templates, CSS, and interview page; skip link, 404 landmark, print rules must be present
+        run: |
+          WB=$(docker exec da bash -c "ls -d /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp")
+          docker cp docassemble_webapp/docassemble/webapp/templates/base_templates/base.html da:"$WB/templates/base_templates/base.html"
+          docker cp docassemble_webapp/docassemble/webapp/templates/pages/404.html da:"$WB/templates/pages/404.html"
+          docker cp docassemble_webapp/docassemble/webapp/static/app/app.css da:"$WB/static/app/app.css"
+          docker cp docassemble_webapp/docassemble/webapp/static/app/app.min.css da:"$WB/static/app/app.min.css"
+          docker cp docassemble_webapp/docassemble/webapp/interview/views.py da:"$WB/interview/views.py"
+          docker exec da bash -c "supervisorctl restart uwsgi"
+          sleep 30
+          bash .github/workflows/e2e/a11y_check.sh http://localhost:8080 expect-pass
 
       - name: Set up node for ALKiln
         uses: actions/setup-node@v4

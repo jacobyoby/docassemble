@@ -6,6 +6,7 @@
 {%- set navigation_bar_html = get_part('404 page navigation bar html') %}
 {%- extends "flask_user/public_base.html" %}
 {%- block content %}
+<main role="main">
 <h1>{{ get_part('404 page heading', word('Not Found')) }}</h1>
 {%- if get_part('404 page pre', False) %}
 {{ get_part('404 page pre') }}
@@ -13,4 +14,6 @@
 <p>{{ word("The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.") }}</p>
 {%- endif %}
 {{ get_part('404 page post') }}
+<p><a href="{{ url_for('interview.rootindex') }}">{{ word("Go to the home page") }}</a></p>
+</main>
 {% endblock %}
