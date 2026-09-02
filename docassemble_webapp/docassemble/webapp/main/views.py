@@ -6,7 +6,9 @@ from pathlib import Path
 from urllib.parse import quote as urllibquote
 from user_agents import parse as ua_parse
 from markupsafe import Markup
+from docassemble.base.interview_cache import get_interview
 from flask import (
+    url_for,
     current_app,
     redirect,
     request,
@@ -406,6 +408,29 @@ def favicon_mstile():
 @main_bp.route("/browserconfig.xml", methods=['GET'])
 def favicon_browserconfig():
     return favicon_file('browserconfig.xml')
+
+
+@main_bp.route("/sitemap.xml", methods=['GET'])
+def sitemap():
+    """List the public, listed dispatch interviews so search engines can
+    find every court form without crawling for them. Unlisted interviews
+    and anything not in `dispatch` are omitted."""
+    urls = []
+    for key, yaml_filename in sorted(daconfig.get('dispatch', {}).items()):
+        try:
+            interview = get_interview(yaml_filename)
+        except Exception:
+            continue
+        if interview.is_unlisted() or not interview.allowed_to_see_listed(is_anonymous=True):
+            continue
+        urls.append(url_for('interview.redirect_to_interview', dispatch=key, _external=True))
+    body = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+    for url in urls:
+        body += '  <url><loc>' + url.replace('&', '&amp;') + '</loc></url>\n'
+    body += '</urlset>\n'
+    response = make_response(body, 200)
+    response.mimetype = "application/xml"
+    return response
 
 
 @main_bp.route("/robots.txt", methods=['GET'])

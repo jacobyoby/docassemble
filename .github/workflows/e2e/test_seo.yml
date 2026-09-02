@@ -1,0 +1,14 @@
+metadata:
+  title: SEO check interview
+  short title: SEO check
+  description: A test interview whose description must appear as the page meta description.
+---
+question: SEO check
+subquestion: This page exists so the e2e can assert head tags.
+field: acknowledged
+buttons:
+  - Continue: continue
+---
+mandatory: True
+question: Done
+subquestion: Finished.

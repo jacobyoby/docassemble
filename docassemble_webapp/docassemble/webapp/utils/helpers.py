@@ -778,7 +778,7 @@ def additional_css(interview_status, js_only=False):
     return output
 
 
-def standard_html_start(interview_language=DEFAULT_LANGUAGE, debug=False, bootstrap_theme=None, external=False, page_title=None, social=None, yaml_filename=None):
+def standard_html_start(interview_language=DEFAULT_LANGUAGE, debug=False, bootstrap_theme=None, external=False, page_title=None, social=None, yaml_filename=None, description=None):
     if social is None:
         social = {}
     if page_title is None:
@@ -802,6 +802,17 @@ def standard_html_start(interview_language=DEFAULT_LANGUAGE, debug=False, bootst
             output += '\n    <meta name="' + key + '" content="' + social[key] + '">'
     if 'description' in social:
         output += '\n    <meta itemprop="description" content="' + social['description'] + '">'
+    # Search engines read <meta name="description">, not the schema.org
+    # itemprop above. Prefer the interview's own metadata description, then
+    # the site-wide social description.
+    meta_description = description if description else social.get('description')
+    if meta_description:
+        meta_description = str(meta_description).replace('\n', ' ').replace('"', '&quot;').strip()
+        output += '\n    <meta name="description" content="' + meta_description + '">'
+    if yaml_filename:
+        # Interview URLs carry session/state params; canonical to the clean
+        # entry URL so every visit is not indexed as a duplicate page.
+        output += '\n    <link rel="canonical" href="' + url_for('interview.index', i=yaml_filename, _external=True) + '">'
     if 'image' in social:
         output += '\n    <meta itemprop="image" content="' + social['image'] + '">'
     if 'name' in social:
@@ -818,7 +829,7 @@ def standard_html_start(interview_language=DEFAULT_LANGUAGE, debug=False, bootst
     if 'fb' in social:
         for key, val in social['fb'].items():
             output += '\n    <meta name="fb:' + key + '" content="' + val + '">'
-    if 'og' in social and 'image' in social['og']:
+    if 'og' in social:
         for key, val in social['og'].items():
             output += '\n    <meta name="og:' + key + '" content="' + val + '">'
         if 'title' not in social['og']:

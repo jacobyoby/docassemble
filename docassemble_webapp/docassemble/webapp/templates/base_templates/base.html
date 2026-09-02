@@ -27,7 +27,7 @@
 {%- endif %}
 {%- endfor %}
     <meta name="twitter:title" content="{% if page_title %}{{ config['BRAND_NAME'] }}: {{ page_title | striptags | e  }}{% else %}{{ config['BRAND_NAME'] }}{% endif %}">
-{%- if 'image' in config['SOCIAL']['og'] %}
+{%- if config['SOCIAL']['og'] is defined %}
     <meta name="og:title" content="{% if page_title %}{{ config['BRAND_NAME'] }}: {{ page_title | striptags | e  }}{% else %}{{ config['BRAND_NAME'] }}{% endif %}">
 {%- for key in config['SOCIAL']['og'] %}
 {%- if key not in ('locale', 'url') %}

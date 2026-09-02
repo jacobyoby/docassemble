@@ -2651,7 +2651,7 @@ def index(action_argument=None, refer=None):
         social = copy.deepcopy(daconfig['social'])
         if 'social' in interview.consolidated_metadata and isinstance(interview.consolidated_metadata['social'], dict):
             populate_social(social, interview.consolidated_metadata['social'])
-        standard_header_start = standard_html_start(interview_language=interview_language, debug=debug_mode, bootstrap_theme=bootstrap_theme, page_title=interview_status.title, social=social, yaml_filename=yaml_filename)
+        standard_header_start = standard_html_start(interview_language=interview_language, debug=debug_mode, bootstrap_theme=bootstrap_theme, page_title=interview_status.title, social=social, yaml_filename=yaml_filename, description=interview.consolidated_metadata.get('description'))
     if debug_mode:
         interview_status.screen_reader_text = {}
     if TTS_ENABLED and 'speak_text' in interview_status.extras and interview_status.extras['speak_text']:

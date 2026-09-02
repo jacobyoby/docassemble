@@ -27,15 +27,10 @@ tuple instead of an action dict) got through CI for exactly that reason.
 
 Tracked as GitHub issues on the fork, label `enhancement`.
 
-- [#15](https://github.com/jacobyoby/docassemble/issues/15) SEO for public
-  interview pages: meta description, canonical, ungated OG, sitemap from
-  `dispatch`, meta robots. ~2.5 hrs; start with description + canonical.
-- [#16](https://github.com/jacobyoby/docassemble/issues/16) Ajax input that
-  accumulates to a list (upstream #280).
+- [#16](https://github.com/jacobyoby/docassemble/issues/16) — closed: the
+  Tom Select multiselect-autocomplete already does this.
 - [#17](https://github.com/jacobyoby/docassemble/issues/17) Cloudron
   packaging for self-hosting (upstream #917).
-- [#18](https://github.com/jacobyoby/docassemble/issues/18) Accessibility: skip link, 404 landmark + link home, print
-  stylesheet (WCAG 2.4.1). ~2 hrs.
 - [#19](https://github.com/jacobyoby/docassemble/issues/19) Page weight: 1.5 MB FontAwesome + 259 KB admin bundle load
   on every public page. ~3-6 hrs.
 

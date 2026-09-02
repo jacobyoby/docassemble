@@ -85,6 +85,26 @@ jobs:
           fi
           echo "KEY=$KEY" >> "$GITHUB_ENV"
 
+      - name: Issue-15 setup - install the SEO test interview and configure dispatch + social.og (no image)
+        run: |
+          D=$(docker exec da bash -c "ls -d /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/demo/data/questions")
+          docker cp .github/workflows/e2e/test_seo.yml da:"$D/test_seo.yml"
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          # docker exec needs -i to forward the script on stdin
+          docker exec -i da "$PY" - <<'PYEOF'
+          import yaml
+          p='/usr/share/docassemble/config/config.yml'
+          c=yaml.safe_load(open(p)) or {}
+          c.setdefault('dispatch', {})['seo']='docassemble.demo:data/questions/test_seo.yml'
+          og=c.setdefault('social', {}).setdefault('og', {}); og.pop('image', None); og.setdefault('locale','en_US')
+          yaml.safe_dump(c, open(p,'w'), default_flow_style=False)
+          PYEOF
+          docker exec da bash -c "supervisorctl restart uwsgi"
+          sleep 30
+
+      - name: Issue-15 control - SEO head tags and sitemap must be absent on the unpatched release
+        run: bash .github/workflows/e2e/seo_check.sh http://localhost:8080 expect-fail
+
       - name: Issue-18 control - a11y fixes must be absent on the unpatched release
         run: bash .github/workflows/e2e/a11y_check.sh http://localhost:8080 expect-fail
 
@@ -178,6 +198,15 @@ jobs:
           docker exec da bash -c "supervisorctl restart uwsgi"
           sleep 30
           bash .github/workflows/e2e/a11y_check.sh http://localhost:8080 expect-pass
+
+      - name: Issue-15 - install head builder and sitemap route; description, canonical, og:title, sitemap must be present
+        run: |
+          WB=$(docker exec da bash -c "ls -d /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp")
+          docker cp docassemble_webapp/docassemble/webapp/utils/helpers.py da:"$WB/utils/helpers.py"
+          docker cp docassemble_webapp/docassemble/webapp/main/views.py da:"$WB/main/views.py"
+          docker exec da bash -c "supervisorctl restart uwsgi"
+          sleep 30
+          bash .github/workflows/e2e/seo_check.sh http://localhost:8080 expect-pass
 
       - name: Set up node for ALKiln
         uses: actions/setup-node@v4
