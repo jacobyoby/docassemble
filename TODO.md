@@ -30,6 +30,10 @@ Tracked as GitHub issues on the fork, label `enhancement`.
 - [#15](https://github.com/jacobyoby/docassemble/issues/15) SEO for public
   interview pages: meta description, canonical, ungated OG, sitemap from
   `dispatch`, meta robots. ~2.5 hrs; start with description + canonical.
+- [#16](https://github.com/jacobyoby/docassemble/issues/16) Ajax input that
+  accumulates to a list (upstream #280).
+- [#17](https://github.com/jacobyoby/docassemble/issues/17) Cloudron
+  packaging for self-hosting (upstream #917).
 
 ## Fork maintenance
 
