@@ -38,6 +38,18 @@ Tracked as GitHub issues on the fork, label `enhancement`.
   (#19). Splitting it is a large refactor with every widget depending on
   it; measure with pagesize_check.sh before/after. Half a day+.
 
+## Ship the fork to forms.jacobrakai.org
+
+forms runs **stock** docassemble 1.10.7 + the NJForms pip package, not
+this fork (verified on the live interview head). A package cannot patch
+core, so nothing on this branch reaches production until the container
+is built from the fork image.
+
+- [#20](https://github.com/jacobyoby/docassemble/issues/20) Fork-built image: GHCR build on green CI, recover the
+  live `docker run` args, dev first, then recreate the prod container on
+  the same `da_live` volume with the stock container kept for rollback.
+  ~3 hrs; steps 3–5 are production changes and wait for a go.
+
 ## Fork maintenance
 
 - [ ] **Scheduled upstream sync**: weekly Action to fetch upstream
