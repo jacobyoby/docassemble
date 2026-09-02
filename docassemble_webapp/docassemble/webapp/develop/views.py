@@ -2370,7 +2370,7 @@ def do_playground_pull(area, current_project, github_url=None, branch=None, pypi
     #         package_name = orig_package_name + str(index)
     _setup_path = werkzeug.utils.safe_join(directory_for(area['playgroundpackages'], current_project), 'docassemble.' + package_name)
     if _setup_path is None:
-        return ('File not found', 404)
+        return {'action': 'error', 'message': 'invalid package name'}
     with open(_setup_path, 'w', encoding='utf-8') as fp:
         the_yaml = standardyaml.safe_dump(info_dict, default_flow_style=False, default_style='|')
         fp.write(str(the_yaml))
@@ -3441,7 +3441,7 @@ def ensure_ml_file_exists(interview, yaml_file, current_project):
             source_dir.fix()
             source_path = werkzeug.utils.safe_join(source_directory, source_filename)
             if source_path is None:
-                return ('File not found', 404)
+                return
             with open(source_path, 'a', encoding='utf-8'):
                 os.utime(source_path, None)
             source_dir.finalize()
