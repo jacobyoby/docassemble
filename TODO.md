@@ -3,26 +3,27 @@
 Current state, not history; delete items when done. See FORK.md for what
 the branch already carries.
 
-## Security alerts — remaining tail
+## Test coverage gaps
 
-The 239→~25 CodeQL cleanup is largely done: py/path-injection fully
-fixed (38 sinks with safe_join), tarslip fixed (filter='data'), the
-selector-escaper and clear-text/labelauty/exec false positives
-dismissed with rationale, and advanced code-scanning set up with
-vendored/generated exclusions. What remains, none blocking:
+The e2e suite covers interviews, the API, checkboxes, currency, email
+crypto, and the boolean-config case. It does **not** exercise the
+Playground package/project operations, which is where most of the
+safe_join hardening lives. A bug in that area (a helper returning a Flask
+tuple instead of an action dict) got through CI for exactly that reason.
 
-- [ ] **polynomial-redos (~14 left)**: the clean ones are done. The
-  rest are URL-path parsers (`react/api.py` `/(start|run)/...`) and
-  github-url regexes (`packages/helpers.py`) — each needs a
-  behavior-preserving rewrite with a match-equivalence test. Do one at
-  a time; do not blind-sed.
-- [ ] **small tiers (~10)**: js/double-escaping, incomplete-hostname-regexp,
-  url-redirection, stack-trace-exposure, remote-property-injection,
-  regex-injection, bad-tag-filter, xss-through-exception. Each is a
-  single-site read; several are likely upstream-report candidates
-  rather than fork fixes.
+- [ ] **Package-pull traversal e2e**: fail-first test calling
+  `do_playground_pull` with a `../`-bearing package name; must return
+  `{'action': 'error', ...}` on the branch (crashed before 403f08c).
+  ~20 min.
+- [ ] **Project rename/create e2e**: exercise `rename_project` and
+  `create_project` through the Playground UI or API, including a
+  traversal name that must be silently skipped. ~30 min.
+- [ ] **Open-redirect e2e**: POST an invite with `next=https://evil.example`
+  and assert the redirect lands on a local path (make_safe_url). ~15 min.
+- [ ] **Log-download path e2e**: request a log file with a `../` name and
+  assert 404 (logs/views.py safe_join). ~10 min.
 
-## Do next (non-security)
+## Fork maintenance
 
 - [ ] **Scheduled upstream sync**: weekly Action to fetch upstream
   master, rebase jacob/maintained, force-push on green CI, open an
@@ -31,6 +32,9 @@ vendored/generated exclusions. What remains, none blocking:
   commit 24b0275 on the next rebase.
 - [ ] **Upstream the clearer-error commit** (7315492): behavior-neutral,
   answers upstream #981; small PR candidate.
+- [ ] **Upstream the tar-slip fix** (`filter='data'` in
+  do_playground_pull): one-line, security-relevant, no fork-specific
+  behavior; strong PR candidate.
 
 ## Standing rules
 
@@ -39,4 +43,8 @@ vendored/generated exclusions. What remains, none blocking:
   branch; upstream PR branches stay fix-only.
 - Known divergences get a pinning test (see test_bool_dict_divergence).
 - CodeQL runs advanced setup with path exclusions; keep vendored and
-  generated files out of scope, fix first-party source.
+  generated files out of scope, fix first-party source. 0 open as of
+  403f08c; new alerts get fixed or dismissed with a written reason.
+- A safe_join None-guard must return the enclosing function's own
+  error type: a 404 tuple only inside a decorated route, an action
+  dict in dict-returning helpers, a bare return in side-effect helpers.
