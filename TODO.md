@@ -23,6 +23,14 @@ tuple instead of an action dict) got through CI for exactly that reason.
 - [ ] **Log-download path e2e**: request a log file with a `../` name and
   assert 404 (logs/views.py safe_join). ~10 min.
 
+## Feature requests
+
+Tracked as GitHub issues on the fork, label `enhancement`.
+
+- [#15](https://github.com/jacobyoby/docassemble/issues/15) SEO for public
+  interview pages: meta description, canonical, ungated OG, sitemap from
+  `dispatch`, meta robots. ~2.5 hrs; start with description + canonical.
+
 ## Fork maintenance
 
 - [ ] **Scheduled upstream sync**: weekly Action to fetch upstream
