@@ -2196,7 +2196,7 @@ def do_playground_pull(area, current_project, github_url=None, branch=None, pypi
         github_url = re.sub(r'[^A-Za-z0-9\-\.\_\~\:\/\#\[\]\@\$\+\,\=]', '', github_url)
         repo_name = github_url.rstrip('/')
         repo_name = re.sub(r'^http.*github\.com/', '', repo_name)
-        repo_name = re.sub(r'.*@github\.com:', '', repo_name)
+        repo_name = repo_name.rpartition('@github.com:')[2] if '@github.com:' in repo_name else repo_name
         repo_name = re.sub(r'.git$', '', repo_name)
         if 'x-oauth-basic@github.com' not in github_url and can_publish_to_github and github_email:
             github_url = f'git@github.com:{repo_name}.git'
@@ -2368,7 +2368,10 @@ def do_playground_pull(area, current_project, github_url=None, branch=None, pypi
     #     while index < 100 and not user_can_edit_package(pkgname='docassemble.' + package_name):
     #         index += 1
     #         package_name = orig_package_name + str(index)
-    with open(os.path.join(directory_for(area['playgroundpackages'], current_project), 'docassemble.' + package_name), 'w', encoding='utf-8') as fp:
+    _setup_path = werkzeug.utils.safe_join(directory_for(area['playgroundpackages'], current_project), 'docassemble.' + package_name)
+    if _setup_path is None:
+        return ('File not found', 404)
+    with open(_setup_path, 'w', encoding='utf-8') as fp:
         the_yaml = standardyaml.safe_dump(info_dict, default_flow_style=False, default_style='|')
         fp.write(str(the_yaml))
     for sec in area:
@@ -2789,7 +2792,10 @@ def playground_packages():
 
                     info_dict['dependencies'] = [x.strip() for x in map(lambda y: re.sub(r'[\>\<\=@].*', '', y), info_dict['dependencies']) if x not in ('docassemble', 'docassemble.base', 'docassemble.webapp')]
                     package_name = re.sub(r'^docassemble\.', '', extracted.get('name', expected_name))
-                    with open(os.path.join(directory_for(area['playgroundpackages'], current_project), 'docassemble.' + package_name), 'w', encoding='utf-8') as fp:
+                    _setup_path = werkzeug.utils.safe_join(directory_for(area['playgroundpackages'], current_project), 'docassemble.' + package_name)
+                    if _setup_path is None:
+                        return ('File not found', 404)
+                    with open(_setup_path, 'w', encoding='utf-8') as fp:
                         the_yaml = standardyaml.safe_dump(info_dict, default_flow_style=False, default_style='|')
                         fp.write(str(the_yaml))
                     for key in r.keys('da:interviewsource:docassemble.playground' + str(playground_user.id) + project_name(current_project) + ':*'):

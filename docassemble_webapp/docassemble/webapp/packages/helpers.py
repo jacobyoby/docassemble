@@ -179,7 +179,7 @@ def get_branches_of_repo(giturl):
         access_token = None
     repo_name = re.sub(r'^git\+', '', repo_name)
     repo_name = re.sub(r'^http.*github\.com/', '', repo_name)
-    repo_name = re.sub(r'.*@github\.com:', '', repo_name)
+    repo_name = repo_name.rpartition('@github.com:')[2] if '@github.com:' in repo_name else repo_name
     repo_name = re.sub(r'[@#].*', '', repo_name)
     repo_name = re.sub(r'.git$', '', repo_name)
     if current_app.config['ENABLE_PLAYGROUND'] and current_app.config['USE_GITHUB']:
