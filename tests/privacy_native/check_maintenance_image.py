@@ -125,7 +125,7 @@ def prepare():
         assert (current['pid'] == pid) == (name == 'uwsgi'), 'rotation callback service behavior changed'
     install.routes()
     install.read_counters()
-    assert install.protected() == json.loads((WORK / 'protected.json').read_text())
+    install.check_protected()
     scan()
     # This marker appears only after daily backup, proving the shutdown path copies it.
     assert not (ROOT / 'backup/log/jos81-shutdown').exists()
@@ -149,7 +149,7 @@ def resume():
     for path in (ROOT / 'log/jos81-shutdown', ROOT / 'backup/log/jos81-shutdown'):
         assert path.read_bytes() == SHUTDOWN
     assert (ROOT / 'files/jos81-preserve-sentinel').read_text() == 'JOS81_PRESERVE_files'
-    assert install.protected() == json.loads((WORK / 'protected.json').read_text())
+    install.check_protected()
     cookies = SimpleCookie()
     cookies.load(json.loads((WORK / 'cron-session.json').read_text()))
     path = '/nj/?i=docassemble.privacyfixture:data/questions/cron.yml'

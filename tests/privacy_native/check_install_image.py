@@ -96,6 +96,14 @@ def protected():
     return result
 
 
+def check_protected():
+    expected = json.loads((WORK / 'protected.json').read_text())
+    current = protected()
+    changed = {path: {'before': expected.get(path), 'after': current.get(path)}
+               for path in expected.keys() | current.keys() if expected.get(path) != current.get(path)}
+    assert not changed, 'protected paths changed: ' + json.dumps(changed, sort_keys=True)
+
+
 def statuses():
     return {item['name']: item['statename'] for item in RPC.supervisor.getAllProcessInfo()}
 
@@ -404,13 +412,13 @@ def install():
             os.chmod(path, 0o600)
             os.chown(path, 33, 33)
     (WORK / 'installed.json').write_text(json.dumps(installed, indent=2))
-    assert protected() == json.loads((WORK / 'protected.json').read_text())
+    check_protected()
     run(sys.executable, '-I', '-B', str(REPO / 'tests/privacy_native/check_maintenance_image.py'), 'seed')
     start_services(True)
     time.sleep(2)
     before = read_counters()
     routes()
-    assert protected() == json.loads((WORK / 'protected.json').read_text())
+    check_protected()
     for unused in range(50):
         time.sleep(0.2)
         counters = read_counters()
@@ -444,7 +452,7 @@ def rollback():
         if value['kind'] == 'absent' and item.is_dir():
             item.rmdir()
         assert state(item) == value, path + ' did not restore exactly'
-    assert protected() == json.loads((WORK / 'protected.json').read_text())
+    check_protected()
     start_services(False)
     routes()
     assert 'privacy-monitor' not in statuses()
@@ -455,7 +463,7 @@ def rollback():
         elif value == 'STOPPED' and statuses().get(name) == 'RUNNING':
             assert RPC.supervisor.stopProcess(name, True)
     assert statuses() == original, 'service states differ from baseline'
-    assert protected() == json.loads((WORK / 'protected.json').read_text())
+    check_protected()
     # A main-group config update restarts the old initializer, which chowns log
     # files. Restore saved counter metadata after that normal startup completes.
     for path, value in metadata.items():
