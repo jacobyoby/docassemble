@@ -296,6 +296,8 @@ def configure():
     assert config['behind https load balancer'] is True
     config['default interview'] = 'docassemble.privacyfixture:data/questions/install.yml'
     path.write_text(yaml.safe_dump(config, sort_keys=False))
+    # Both populated targets already use this ownership; clean restore retains it.
+    os.chown(path, 33, 33)
     assert RPC.supervisor.stopProcess('uwsgi', True)
     assert RPC.supervisor.startProcess('uwsgi', True)
     ready('/nj/', b'JOS81_APPLICATION_OK')

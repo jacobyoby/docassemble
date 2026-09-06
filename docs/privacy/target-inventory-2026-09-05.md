@@ -144,3 +144,10 @@ path. Preserve that existing system logging configuration and each target's
 service state; no custom application forwarding include needs migration.
 This is configuration evidence, not a scan of historical system-log contents.
 Evidence: `tests/.privacy-build/maintenance-review/target-syslog-includes.json`.
+
+Both live `config/config.yml` files are uid/gid 33:33, mode 0644. The populated
+fixture now starts its protected configuration with that same ownership.
+The unchanged initializer's local restore branch unconditionally assigns
+33:33; a fresh image's root-owned configuration is a different starting state.
+Contents and all ownership/permission comparisons remain exact throughout the
+fixture. Evidence: `tests/.privacy-build/maintenance-review/target-config-metadata.json`.
