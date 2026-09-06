@@ -21,6 +21,8 @@ on:
       - 'Docker/run-celery-single.sh'
       - 'Docker/run-websockets.sh'
       - 'Docker/run-cron.sh'
+      - 'Docker/cron/**'
+      - 'Docker/sync.sh'
       - 'Docker/process-email.sh'
       - 'Docker/initialize.sh'
       - 'Dockerfile'
@@ -45,7 +47,7 @@ concurrency:
 jobs:
   populated-volume-install:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:

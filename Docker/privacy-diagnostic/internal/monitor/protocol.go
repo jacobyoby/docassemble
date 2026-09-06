@@ -110,10 +110,16 @@ func eventRecord(event string, payload []byte) ([]byte, error) {
 		component = "celerysingle"
 	case "websockets":
 		component = "websockets"
+	case "initialize":
+		component = "initialize"
 	default:
 		return nil, nil // Other services and the listener itself are outside this subscription's report scope.
 	}
-	if values["groupname"] != component || values["from_state"] == "" {
+	group := component
+	if component == "initialize" {
+		group = "main" // Keep the initializer's existing concurrent shutdown group.
+	}
+	if values["groupname"] != group || values["from_state"] == "" {
 		return nil, errProtocol
 	}
 	switch event {

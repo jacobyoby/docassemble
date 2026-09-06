@@ -8,13 +8,17 @@ import (
 )
 
 func TestStateEventsContainOnlyFixedFields(t *testing.T) {
-	for _, component := range []string{"nginx", "uwsgi", "uwsgilog", "celery", "celerysingle", "websockets"} {
+	for _, component := range []string{"nginx", "uwsgi", "uwsgilog", "celery", "celerysingle", "websockets", "initialize"} {
+		group := component
+		if component == "initialize" {
+			group = "main"
+		}
 		for _, item := range []struct{ event, details, state string }{
 			{"PROCESS_STATE_EXITED", "from_state:RUNNING expected:0 pid:42", "exited"},
 			{"PROCESS_STATE_BACKOFF", "from_state:STARTING tries:1", "backoff"},
 			{"PROCESS_STATE_FATAL", "from_state:BACKOFF", "fatal"},
 		} {
-			payload := "processname:" + component + " groupname:" + component + " " + item.details + " ignored:SYNTHETIC_PRIVATE"
+			payload := "processname:" + component + " groupname:" + group + " " + item.details + " ignored:SYNTHETIC_PRIVATE"
 			data, err := eventRecord(item.event, []byte(payload))
 			if err != nil {
 				t.Fatal(err)
@@ -74,6 +78,9 @@ func TestMalformedFramesRejectWithoutInputInErrors(t *testing.T) {
 		"processname:uwsgi groupname:uwsgi from_state:RUNNING expected:maybe pid:42",
 		"processname:uwsgi groupname:uwsgi from_state:RUNNING expected:0 pid:0",
 		"processname:uwsgi groupname:other from_state:RUNNING expected:0 pid:42",
+		"processname:initialize groupname:initialize from_state:RUNNING expected:0 pid:42",
+		"processname:initialize groupname:other from_state:RUNNING expected:0 pid:42",
+		"processname:uwsgi groupname:main from_state:RUNNING expected:0 pid:42",
 		"processname:uwsgi groupname:uwsgi from_state:RUNNING expected:0 pid:42 expected:1",
 		"processname:uwsgi groupname:uwsgi from_state:SYNTHETIC_PRIVATE expected:0 pid:42",
 	} {
@@ -86,6 +93,7 @@ func TestMalformedFramesRejectWithoutInputInErrors(t *testing.T) {
 func FuzzEventRecordsHaveOnlyFixedOutput(f *testing.F) {
 	f.Add("PROCESS_STATE_EXITED", []byte("processname:uwsgi groupname:uwsgi from_state:RUNNING expected:0 pid:42"))
 	f.Add("TICK_60", []byte("when:1788654000"))
+	f.Add("PROCESS_STATE_FATAL", []byte("processname:initialize groupname:main from_state:BACKOFF"))
 	f.Add("PROCESS_STATE_FATAL", []byte("SYNTHETIC_PRIVATE"))
 	f.Fuzz(func(t *testing.T, event string, payload []byte) {
 		if len(payload) > MaxFrame+1 || len(event) > MaxFrame+1 {
@@ -103,7 +111,7 @@ func FuzzEventRecordsHaveOnlyFixedOutput(f *testing.F) {
 			return
 		}
 		allowed := false
-		for _, component := range []string{"nginx", "uwsgi", "uwsgilog", "celery", "celerysingle", "websockets"} {
+		for _, component := range []string{"nginx", "uwsgi", "uwsgilog", "celery", "celerysingle", "websockets", "initialize"} {
 			for _, state := range []string{"exited", "backoff", "fatal"} {
 				allowed = allowed || bytes.Equal(data, fixed(component, "process_failed", state))
 			}

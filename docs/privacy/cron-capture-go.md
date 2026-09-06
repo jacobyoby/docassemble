@@ -29,10 +29,10 @@ private markers. Separate controls prove that the scan detects raw and
 compressed markers across read boundaries. These additions require native CI;
 source assertions alone are not an acceptance result.
 
-This closes only the interview launch path once verified. The parent hourly,
-daily, weekly and monthly scripts still perform configuration, cleanup and
-backup commands outside this capture layer. `sync.sh`, rolling/cloud backups,
-startup restore and shutdown backup can copy file bytes directly. Those paths,
-the manual Python cron entrypoint, and actual target backup settings remain
-part of the open release review. Historical logs must not be deleted merely to
-make a privacy test pass. The Go mail replacement remains deferred.
+Native CI on a32541b4d passed the interview launch, result, failure and shutdown
+checks described above. The [maintenance extension](maintenance-capture-go.md)
+now wraps parent scheduled scripts and exercises local copies, backup and
+restore separately. A stream capture cannot filter bytes copied from files.
+Historical logs must not be deleted merely to make a privacy test pass.
+Manual Python cron invocation remains outside the supported launch path.
+The Go mail replacement remains deferred.

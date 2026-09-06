@@ -58,7 +58,7 @@ func capture(t *testing.T, args []string) (int, []byte) {
 }
 
 func TestEveryAllowedComponentAndPhase(t *testing.T) {
-	for _, comp := range []string{"nginx", "uwsgi", "uwsgilog", "celery", "celerysingle", "websockets", "mail", "cron"} {
+	for _, comp := range []string{"nginx", "uwsgi", "uwsgilog", "celery", "celerysingle", "websockets", "mail", "cron", "initialize", "maintenance"} {
 		for _, stage := range []string{"activation", "config", "config_eval", "preflight", "launch"} {
 			t.Run(comp+"/"+stage, func(t *testing.T) {
 				code, data := capture(t, []string{comp, stage})

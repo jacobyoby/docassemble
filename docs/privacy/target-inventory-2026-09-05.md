@@ -96,3 +96,42 @@ full application/output coverage and exact candidate commit/CI. Earlier native
 fixtures used nginx 1.30.4 and syslog-ng 4.11.0, so their passes alone do not prove
 the installed versions above. Go mail replacement and Exim changes remain
 [deferred](deferred-mail-go.md).
+
+## Cron and backup follow-up
+
+A subsequent read-only probe covers the added thirtieth catalog file,
+`webapp/run-cron.sh`: both installed copies match the repository base hash
+`0dff2d464606dd708864cb96e88a64410ad57a4fc9f698b50dab8f4533115b8c`.
+Both targets provide `setpriv` and the virtualenv Flask entrypoint. Flask is
+mode 0755, owned by uid/gid 33; ordinary ownership is compatible with the
+native runner and needs no broad permission change.
+
+Both targets have S3 and Azure backup disabled, 14 rolling-backup days, a
+writable filesystem, the default application log directory, and existing local
+`backup/log` and `backup/nginxlogs` directories. The probe reported only these
+settings and directory existence; it did not read retained log contents or
+print credentials, bucket names, or application data. Local maintenance,
+copy, backup and restore are therefore the next acceptance scope. Cloud,
+Apache and explicit log-role paths are conditional rather than active-target
+requirements established by this probe. Effective crontab contents were not
+inspected. Evidence: `tests/.privacy-build/queue-cron-review/target-copy-settings.txt`
+and `target-cron-runtime.txt`. Production remains unchanged.
+
+The same bounded probe finds `allow updates` disabled on both targets, although
+`update on start` is true; the initializer requires both switches before its
+package-update branch. Neither target configures error-notification email or
+its interview-variable attachments. These settings distinguish conditional
+package-update temporary diagnostics and error-mail attachments from active
+ordinary service logging. They do not cover manually invoked updates or
+third-party package handlers. The evidence records only booleans in
+`target-diagnostic-settings.txt`.
+
+The maintenance follow-up confirms that all four installed interval scripts
+and `sync.sh` are root-owned mode 0755. Four script hashes match the pre-change
+source on both targets. The daily script differs on both, so its catalog entry
+applies only the privacy diff, as the initializer already does. Its existing
+backup implementation must be retained. The actual crontab contains all four
+run-parts schedules and the colon-delimited all-role setting used by the rotation
+callback. The probe emitted only hashes, permissions and schedule booleans,
+not crontab contents. Evidence is in
+`tests/.privacy-build/maintenance-review/target-maintenance-paths.txt`.

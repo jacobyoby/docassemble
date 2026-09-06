@@ -9,7 +9,7 @@ import (
 )
 
 func TestApplicationOutputCannotBecomeRequestMetrics(t *testing.T) {
-	for _, name := range []string{"celery", "celerysingle", "websockets", "mail", "cron"} {
+	for _, name := range []string{"celery", "celerysingle", "websockets", "mail", "cron", "initialize", "maintenance"} {
 		component, err := ParseComponent(name)
 		if err != nil {
 			t.Fatalf("application profile %s unavailable: %v", name, err)

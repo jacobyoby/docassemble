@@ -28,6 +28,8 @@ const (
 	websockets
 	mail
 	cron
+	initialize
+	maintenance
 )
 
 type phase uint8
@@ -77,6 +79,10 @@ func parse(args []string) (failure, int) {
 		f.component = mail
 	case "cron":
 		f.component = cron
+	case "initialize":
+		f.component = initialize
+	case "maintenance":
+		f.component = maintenance
 	default:
 		return invalid, usageFailure
 	}
@@ -104,7 +110,7 @@ func parse(args []string) (failure, int) {
 
 func encode(f failure) ([]byte, error) {
 	// All strings come from these constants, never from CLI values.
-	components := [...]string{"launcher", "nginx", "uwsgi", "uwsgilog", "celery", "celerysingle", "websockets", "mail", "cron"}
+	components := [...]string{"launcher", "nginx", "uwsgi", "uwsgilog", "celery", "celerysingle", "websockets", "mail", "cron", "initialize", "maintenance"}
 	phases := [...]string{"invocation", "activation", "config", "config_eval", "preflight", "launch", "execution"}
 	if int(f.component) >= len(components) || int(f.phase) >= len(phases) || f.phase == execution && f.component != cron {
 		f = failure{launcher, invocation}

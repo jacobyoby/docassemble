@@ -240,7 +240,7 @@ func (x *execution) loop(stops, hup, reopen <-chan os.Signal) int {
 		final := x.forced || x.exited && !alive && x.ended[0] && x.ended[1]
 		// Finite mail/cron commands emit at most one final record; services
 		// retain periodic progress counters. Mail's delivery semantics are separate.
-		periodic := x.opts.component != aggregate.Mail && x.opts.component != aggregate.Cron
+		periodic := x.opts.component != aggregate.Mail && x.opts.component != aggregate.Cron && x.opts.component != aggregate.Maintenance
 		report := final || periodic && !now.Before(x.nextWrite)
 		if x.failure == 0 && !x.writing && x.dirty && report {
 			x.write(now)

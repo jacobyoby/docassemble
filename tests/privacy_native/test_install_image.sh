@@ -33,8 +33,8 @@ trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 # Generate the source privacy delta from the reviewed base; do not duplicate it in a fixture.
-git -C "$REVIEW_ROOT" diff 63d22c44b7bd008a521f0bcb8ab442b2143ee557 -- Docker/initialize.sh > "$REVIEW_BUILD/initialize-privacy.patch"
-test -s "$REVIEW_BUILD/initialize-privacy.patch"
+git -C "$REVIEW_ROOT" diff 63d22c44b7bd008a521f0bcb8ab442b2143ee557 -- Docker/initialize.sh Docker/cron/docassemble-cron-daily.sh > "$REVIEW_BUILD/overlay-privacy.patch"
+test -s "$REVIEW_BUILD/overlay-privacy.patch"
 for REVIEW_COMPONENT in diagnostic process preflight monitor; do
     REVIEW_PACKAGE="./cmd/privacy-$REVIEW_COMPONENT"
     if [ "$REVIEW_COMPONENT" = diagnostic ]; then REVIEW_PACKAGE=.; fi
@@ -85,7 +85,10 @@ else:
     raise SystemExit('stock application did not become ready within 240 seconds')
 PY
 timeout -k 5 600 docker exec "$REVIEW_CONTAINER" /usr/share/docassemble/local3.14/bin/python \
-    -I -B /review/tests/privacy_native/check_install_image.py
+    -I -B /review/tests/privacy_native/check_install_image.py prepare
+python3.14 -B "$REVIEW_ROOT/tests/privacy_native/check_install_lifecycle.py" "$REVIEW_CONTAINER" "$REVIEW_RUN"
+timeout -k 5 600 docker exec "$REVIEW_CONTAINER" /usr/share/docassemble/local3.14/bin/python \
+    -I -B /review/tests/privacy_native/check_install_image.py resume
 python3.14 -B - "$REVIEW_CONTAINER" <<'PY'
 import subprocess
 import sys

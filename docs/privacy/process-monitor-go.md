@@ -24,7 +24,10 @@ Only fixed service/state labels reach the report sink:
 ```
 
 Components are `nginx`, `uwsgi`, `uwsgilog`, `celery`, `celerysingle`,
-`websockets`, and `monitor`. Process failures use
+`websockets`, `initialize`, and `monitor`. The initializer is accepted only
+with Supervisor group `main`; the other process/group pairs must match.
+The new initializer pairing is covered by wire tests and a real Supervisor
+fixture and awaits native CI with the maintenance extension. Process failures use
 states `exited`, `backoff`, or `fatal`; monitor readiness/liveness uses `ready`.
 An unexpected exit produces a failure record. A missing executable, early exit,
 or exhausted startup retries produces BACKOFF/FATAL records as supplied by

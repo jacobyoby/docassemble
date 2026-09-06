@@ -28,6 +28,8 @@ const (
 	Websockets
 	Mail
 	Cron
+	Initialize
+	Maintenance
 )
 
 type Stream uint8
@@ -59,12 +61,16 @@ func ParseComponent(name string) (Component, error) {
 		return Mail, nil
 	case "cron":
 		return Cron, nil
+	case "initialize":
+		return Initialize, nil
+	case "maintenance":
+		return Maintenance, nil
 	default:
 		return 0, ErrComponent
 	}
 }
 
-func (c Component) application() bool { return c >= Celery && c <= Cron }
+func (c Component) application() bool { return c >= Celery && c <= Maintenance }
 
 func (c Component) valid() bool { return c == Nginx || c == UWsgi || c.application() }
 
@@ -86,6 +92,10 @@ func (c Component) name() string {
 		return "mail"
 	case Cron:
 		return "cron"
+	case Initialize:
+		return "initialize"
+	case Maintenance:
+		return "maintenance"
 	}
 	return ""
 }

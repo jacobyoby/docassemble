@@ -38,6 +38,7 @@ def main():
             'nginx': '/bin/sh -c "sleep 2; exit 0"',
             'uwsgi': '/bin/sh -c "sleep 2; exit 74"',
             'uwsgilog': '/missing-synthetic-privacy-helper',
+            'initialize': '/bin/sh -c "sleep 2; exit 74"',
             'SYNTHETIC_PRIVATE_192.0.2.1': '/bin/false',
         }
         for name, command in commands.items():
@@ -47,6 +48,7 @@ def main():
                 'stdout_logfile': 'NONE', 'stderr_logfile': 'NONE',
                 'stopasgroup': 'true', 'killasgroup': 'true',
             }
+        config['group:main'] = {'programs': 'initialize'}
         application = directory / 'application'
         (application / 'runtime/bin').mkdir(parents=True)
         (application / 'webapp').mkdir()
@@ -82,6 +84,7 @@ def main():
                           ('uwsgi', 'process_failed', 'exited'),
                           ('uwsgilog', 'process_failed', 'backoff'),
                           ('uwsgilog', 'process_failed', 'fatal')}
+                wanted.add(('initialize', 'process_failed', 'exited'))
                 wanted.update((name, 'process_failed', 'exited') for name in profiles)
                 deadline = time.monotonic() + 15
                 while time.monotonic() < deadline:

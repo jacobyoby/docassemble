@@ -2,6 +2,20 @@
 
 export HOME=/root
 export DA_ROOT="${DA_ROOT:-/usr/share/docassemble}"
+# Internal handoff only; normal invocations always enter native capture.
+if [ "${1:-}" != "--privacy-captured" ]; then
+    exec 3>&1
+    exec >/dev/null 2>&1
+    [ -x "${DA_ROOT}/webapp/privacy-diagnostic" ] || exit 69
+    shopt -s execfail
+    exec "${DA_ROOT}/webapp/privacy-process" --component initialize -- \
+        /bin/bash "${BASH_SOURCE[0]}" --privacy-captured "$@" >&3 3>&-
+    exec 3>&1 >/dev/null
+    "${DA_ROOT}/webapp/privacy-diagnostic" initialize launch >&3 3>&-
+    exit $?
+fi
+shift
+
 export DA_DEFAULT_LOCAL="local3.14"
 
 export DA_ACTIVATE="${DA_PYTHON:-${DA_ROOT}/${DA_DEFAULT_LOCAL}}/bin/activate"

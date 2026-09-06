@@ -83,7 +83,7 @@ func FuzzFragmentationPreservesCounters(f *testing.F) {
 		if len(data) > 64*1024 {
 			data = data[:64*1024]
 		}
-		components := [...]Component{Nginx, UWsgi, Celery, CelerySingle, Websockets, Mail, Cron}
+		components := [...]Component{Nginx, UWsgi, Celery, CelerySingle, Websockets, Mail, Cron, Initialize, Maintenance}
 		component := components[int(rawComponent)%len(components)]
 		whole, parts := newAggregate(t, component), newAggregate(t, component)
 		feed(t, whole, Stdout, data)

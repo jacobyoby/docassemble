@@ -41,7 +41,7 @@ def records(data, component):
         assert value['schema'] == 1 and value['component'] == component, 'counter identity'
         assert all(type(count) is int and 0 <= count <= 2147483647
                    for key, count in value.items() if key != 'component'), 'counter bounds'
-        if component in ('celery', 'celerysingle', 'websockets', 'cron'):
+        if component in ('celery', 'celerysingle', 'websockets', 'cron', 'initialize', 'maintenance'):
             assert all(count == 0 for key, count in value.items()
                        if key.startswith(('status_', 'latency_'))), 'application request counts'
     return values
@@ -123,6 +123,17 @@ def stop_services():
 def start_services(candidate):
     run('supervisorctl', '-s', 'http://localhost:9001', 'reread')
     run('supervisorctl', '-s', 'http://localhost:9001', 'update')
+    # A main-group configuration change restarts initialization and its database
+    # siblings together. RUNNING alone does not mean startup/chown has finished.
+    deadline = time.monotonic() + 240
+    while not Path('/var/run/docassemble/ready').exists():
+        assert statuses().get('initialize') in ('STARTING', 'RUNNING'), 'initializer failed'
+        assert time.monotonic() < deadline, 'initializer readiness deadline exceeded'
+        time.sleep(0.5)
+    original = json.loads((WORK / 'services.json').read_text())
+    for name, value in original.items():
+        if value == 'STOPPED' and statuses().get(name) == 'RUNNING':
+            assert RPC.supervisor.stopProcess(name, True)
     if candidate:
         for unused in range(30):
             if statuses().get('privacy-monitor') == 'RUNNING':
@@ -235,6 +246,7 @@ def cron_interview():
     values = records(output, 'cron')
     assert len(values) == 1 and values[0]['unclassified'] >= 2, 'cron output was not counted once'
     assert b'JOS81_CRON_COUNT_1' in fetch(path, cookies=cookies), 'cron did not save its session changes'
+    (WORK / 'cron-session.json').write_text(json.dumps({key: value.value for key, value in cookies.items()}))
     failure = subprocess.run(['env', 'DA_CONFIG=/nonexistent/JOS81_PRIVATE_CONFIG',
                               'bash', ROOT + '/webapp/run-cron.sh', 'cron_hourly'],
                              capture_output=True, timeout=30)
@@ -292,7 +304,9 @@ def seed():
     site.write_text('server { listen 127.0.0.1:8088; server_name privacy-install.test; location / { return 200 "JOS81_KEEP_SITE"; } }\n')
     Path('/etc/nginx/sites-enabled/formapauperis').symlink_to(site)
     for dirname in ('files', 'log'):
-        Path(ROOT + '/' + dirname + '/jos81-preserve-sentinel').write_text('JOS81_PRESERVE_' + dirname)
+        sentinel = Path(ROOT + '/' + dirname + '/jos81-preserve-sentinel')
+        sentinel.write_text('JOS81_PRESERVE_' + dirname)
+        os.chown(sentinel, 33, 33)
     # Exercise metadata restoration for existing counter files, without historical data.
     for item in CATALOG['states']:
         if item['kind'] == 'counter-file':
@@ -348,10 +362,13 @@ def snapshot():
 def install():
     expected = json.loads((WORK / 'baseline.json').read_text())
     assert all(state(Path(path)) == value for path, value in expected.items())
-    patched = WORK / 'patched' / 'Docker'
-    patched.mkdir(parents=True)
-    shutil.copy2(ROOT + '/webapp/initialize.sh', patched / 'initialize.sh')
-    run('patch', '--batch', '--fuzz=0', '-p1', '-d', str(patched.parent), '-i', str(REPO / 'tests/.privacy-build/initialize-privacy.patch'))
+    patched = WORK / 'patched'
+    for item in CATALOG['files']:
+        if item.get('existing') == 'apply-privacy-diff':
+            destination = patched / item['source']
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(resolve(item['target']), destination)
+    run('patch', '--batch', '--fuzz=0', '-p1', '-d', str(patched), '-i', str(REPO / 'tests/.privacy-build/overlay-privacy.patch'))
     installed = {}
     for item in CATALOG['files']:
         target = resolve(item['target'])
@@ -363,7 +380,7 @@ def install():
             raw = source.read_bytes()
             assert raw[:4] == b'\x7fELF' and int.from_bytes(raw[18:20], 'little') == 62
         elif item.get('existing') == 'apply-privacy-diff':
-            source = patched / 'initialize.sh'
+            source = patched / item['source']
         else:
             source = REPO / item['source']
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -385,6 +402,7 @@ def install():
             os.chown(path, 33, 33)
     (WORK / 'installed.json').write_text(json.dumps(installed, indent=2))
     assert protected() == json.loads((WORK / 'protected.json').read_text())
+    run(sys.executable, '-I', '-B', str(REPO / 'tests/privacy_native/check_maintenance_image.py'), 'seed')
     start_services(True)
     time.sleep(2)
     before = read_counters()
@@ -423,14 +441,6 @@ def rollback():
         if value['kind'] == 'absent' and item.is_dir():
             item.rmdir()
         assert state(item) == value, path + ' did not restore exactly'
-    for path, value in metadata.items():
-        item = Path(path)
-        if value['kind'] != 'absent':
-            assert value['kind'] == 'file'
-            os.chown(item, value['uid'], value['gid'])
-            os.chmod(item, value['mode'])
-            assert state(item, contents=False) == value, 'counter metadata changed'
-        assert state(item)['sha256'] == counter_hashes[path], 'counter contents changed'
     assert protected() == json.loads((WORK / 'protected.json').read_text())
     start_services(False)
     routes()
@@ -439,21 +449,35 @@ def rollback():
     for name, value in original.items():
         if value == 'RUNNING' and statuses().get(name) != 'RUNNING':
             assert RPC.supervisor.startProcess(name, True)
+        elif value == 'STOPPED' and statuses().get(name) == 'RUNNING':
+            assert RPC.supervisor.stopProcess(name, True)
     assert statuses() == original, 'service states differ from baseline'
     assert protected() == json.loads((WORK / 'protected.json').read_text())
-    assert all(state(Path(path))['sha256'] == digest for path, digest in counter_hashes.items())
+    # A main-group config update restarts the old initializer, which chowns log
+    # files. Restore saved counter metadata after that normal startup completes.
+    for path, value in metadata.items():
+        item = Path(path)
+        if value['kind'] != 'absent':
+            assert value['kind'] == 'file'
+            os.chown(item, value['uid'], value['gid'])
+            os.chmod(item, value['mode'])
+            assert state(item, contents=False) == value, 'counter metadata changed'
+        assert state(item)['sha256'] == counter_hashes[path], 'counter contents changed'
     print('rollback files/metadata, preserved counters, original service states and routes pass', flush=True)
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 1:
-        raise SystemExit('run without arguments inside the disposable test container')
+    if sys.argv[1:] not in (['prepare'], ['resume']):
+        raise SystemExit('use prepare or resume inside the disposable test container')
     socket.setdefaulttimeout(90)
-    configure()
-    seed()
-    install()
-    queued_job()
-    cron_interview()
-    print(run(sys.executable, '-I', '-B', str(REPO / 'tests/privacy_native/check_cron_launcher.py'), timeout=160).decode(), end='', flush=True)
-    rollback()
+    if sys.argv[1] == 'prepare':
+        configure()
+        seed()
+        install()
+        queued_job()
+        cron_interview()
+        print(run(sys.executable, '-I', '-B', str(REPO / 'tests/privacy_native/check_cron_launcher.py'), timeout=160).decode(), end='', flush=True)
+    print(run(sys.executable, '-I', '-B', str(REPO / 'tests/privacy_native/check_maintenance_image.py'), sys.argv[1], timeout=240).decode(), end='', flush=True)
+    if sys.argv[1] == 'resume':
+        rollback()
     private_output_absent((Path(ROOT + '/log'), Path('/var/log')))
