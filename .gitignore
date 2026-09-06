@@ -76,6 +76,8 @@ CLAUDE.md
 .claude/
 .claudeignore
 __pycache__
+tests/.privacy-build/
+tests/.aggregate-review/
 pyproject.toml
 autoimport.py
 runpylint.py

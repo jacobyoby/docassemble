@@ -708,7 +708,7 @@ echo "initialize: Running start hook" >&2
 
 python -m docassemble.webapp.starthook "${DA_CONFIG_FILE}"
 
-if [ "${DAWEBSERVER:-nginx}" = "nginx" ]; then
+if [ "${DAWEBSERVER:-nginx}" = "nginx" ] || { [ "${DAWEBSERVER:-nginx}" = "none" ] && [[ $CONTAINERROLE =~ .*:log:.* ]]; }; then
     echo "initialize: Setting up NGINX basic configuration and uwsgi directory" >&2
     if [ "${DAREADONLYFILESYSTEM:-false}" == "false" ]; then
         sed -e 's@{{DA_PYTHON}}@'"${DA_PYTHON:-${DA_ROOT}/${DA_DEFAULT_LOCAL}}"'@' \
@@ -1349,6 +1349,10 @@ touch /usr/share/docassemble/log/worker.log \
     && touch /usr/share/docassemble/log/single_worker.log \
     && touch /usr/share/docassemble/log/uwsgi.log \
     && touch /usr/share/docassemble/log/websockets.log \
+    && touch /usr/share/docassemble/log/privacy-celery.log \
+    && touch /usr/share/docassemble/log/privacy-celerysingle.log \
+    && touch /usr/share/docassemble/log/privacy-uwsgi.log \
+    && touch /usr/share/docassemble/log/privacy-websockets.log \
     && chown -R www-data:www-data /usr/share/docassemble/log
 
 if [ "${DAWEBSERVER:-nginx}" = "none" ]; then
@@ -1366,6 +1370,7 @@ if [ "${DAWEBSERVER:-nginx}" = "none" ]; then
         ${SUPERVISORCMD} start uwsgi
     fi
     if [[ $CONTAINERROLE =~ .*:log:.* ]]; then
+        ${SUPERVISORCMD} start uwsgilog || exit 1
         echo "initialize: Starting NGINX" >&2
         ${SUPERVISORCMD} start nginx
     fi
@@ -1455,6 +1460,9 @@ if [ "${DAWEBSERVER:-nginx}" = "nginx" ]; then
 	fi
         echo "initialize: Starting uwsgi" >&2
         ${SUPERVISORCMD} start uwsgi
+    fi
+    if [[ $CONTAINERROLE =~ .*:log:.* ]]; then
+        ${SUPERVISORCMD} start uwsgilog || exit 1
     fi
     if [[ $CONTAINERROLE =~ .*:(all|web|log):.* ]]; then
         if [ "$NGINXRUNNING" == "false" ]; then

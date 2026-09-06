@@ -22,13 +22,10 @@ from docassemble.webapp.tasks.app import celery_app
 
 
 def main():
-    fp = open("/tmp/mail.log", "a", encoding="utf-8")
-    # fp.write("The file is " + sys.argv[1] + "\n")
     try:
         with open(sys.argv[1], 'r', encoding="utf-8") as email_fp:
             msg = email.message_from_file(email_fp)
-    except BaseException as err:
-        fp.write("Failed to read e-mail message: " + str(err) + "\n")
+    except BaseException:
         sys.exit("Failed to read e-mail message")
     raw_date = msg.get('Date', msg.get('Resent-Date', None))
     addr_return_path = msg.get('Return-path', None)
@@ -36,9 +33,6 @@ def main():
     addr_to = msg.get('Envelope-to', None)
     addr_from = msg.get('From', msg.get('Sender', None))
     subject = msg.get('Subject', None)
-    fp.write("Message to " + str(addr_to) + "\n")
-    # fp.write("From was " + str(addr_from) + "\n")
-    # fp.write("Subject was " + str(subject) + "\n")
     to_recipients = []
     for recipient in getaddresses(msg.get_all('to', []) + msg.get_all('resent-to', [])):
         to_recipients.append({'name': recipient[0], 'address': recipient[1]})
@@ -50,51 +44,36 @@ def main():
         recipients.append({'name': recipient[0], 'address': recipient[1]})
     if addr_to is None and len(recipients) > 0:
         addr_to = recipients[0]['address']
-    # fp.write("recipients are " + str(recipients) + "\n")
     if addr_to is not None:
-        # fp.write("parsed envelope-to: " + str(parseaddr(addr_to)) + "\n")
         short_code = re.sub(r'@.*', '', parseaddr(addr_to)[1])
     else:
         short_code = None
-    # fp.write("short code is " + str(short_code) + "\n")
     with session_scope() as session:
         record = session.execute(select(Shortener).filter_by(short=short_code)).scalar()
         if record is None:
-            fp.write("short code not found\n")
             sys.exit("short code not found")
-            # fp.write("short code found\n")
         # file_number = get_new_file_number(record.uid, 'email', record.filename)
-        # #fp.write("file number is " + str(file_number) + "\n")
         # saved_file_email = SavedFile(file_number, fix=True)
         if addr_from is not None:
-            # fp.write("parsed from: " + str(parseaddr(addr_from)[1]) + "\n")
             addr_from = {'name': parseaddr(addr_from)[0], 'address': parseaddr(addr_from)[1]}
         else:
             addr_from = {'empty': True}
         if addr_return_path is not None:
-            # fp.write("parsed return_path: " + str(parseaddr(addr_return_path)[1]) + "\n")
             addr_return_path = {'name': parseaddr(addr_return_path)[0], 'address': parseaddr(addr_return_path)[1]}
         else:
             addr_return_path = {'empty': True}
-        # fp.write("return_path is " + str(addr_return_path) + "\n")
         if addr_reply_to is not None:
-            # fp.write("parsed reply-to: " + str(parseaddr(addr_reply_to)[1]) + "\n")
             addr_reply_to = {'name': parseaddr(addr_reply_to)[0], 'address': parseaddr(addr_reply_to)[1]}
-            # fp.write("reply-to is " + str(addr_reply_to) + "\n")
         else:
             addr_reply_to = {'empty': True}
-        # fp.write("reply-to is " + str(addr_reply_to) + "\n")
         msg_current_time = datetime.datetime.now()
         if raw_date is not None:
             msg_date = datetime.datetime.fromtimestamp(mktime(parsedate(raw_date)))
-            # fp.write("msg_date is " + str(msg_date) + "\n")
         else:
             msg_date = msg_current_time
-            # fp.write("msg_date set to current time\n")
         headers = []
         for item in msg.items():
             headers.append([item[0], item[1]])
-        # fp.write("headers:\n" + json.dumps(headers) + "\n")
 
         email_record = Email(short=short_code, to_addr=json.dumps(to_recipients), cc_addr=json.dumps(cc_recipients), from_addr=json.dumps(addr_from), reply_to_addr=json.dumps(addr_reply_to), return_path_addr=json.dumps(addr_return_path), subject=subject, datetime_message=msg_date, datetime_received=msg_current_time)
         session.add(email_record)
@@ -115,14 +94,11 @@ def main():
                 filename = '%03d-%s' % (counter, safe_filename(filename))
             else:
                 filename = '%03d-attachment%s' % (counter, ext)
-            # fp.write("Filename is " + str(filename) + "\n")
-            # fp.write("Content type is " + str(part.get_content_type()) + "\n")
 
             real_filename = re.sub(r'[0-9][0-9][0-9]-', r'', filename)
             real_ext = re.sub(r'^\.', r'', ext)
             save_attachment(session, record.uid, record.filename, real_filename, email_record.id, counter, part.get_content_type(), real_ext, part.get_payload(decode=True))
             counter += 1
-        fp.close()
         user = None
         if record.user_id is not None:
             user = session.execute(select(UserModel).options(joinedload(UserModel.roles)).filter_by(id=record.user_id)).scalar()
