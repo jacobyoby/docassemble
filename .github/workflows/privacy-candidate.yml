@@ -37,6 +37,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: privacy-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   populated-volume-install:
     runs-on: ubuntu-24.04
@@ -66,6 +70,8 @@ jobs:
       GOTOOLCHAIN: local
     steps:
       - uses: actions/checkout@v4
+      - name: Create Go working directories before toolchain setup
+        run: mkdir -p "$GOCACHE" "$GOMODCACHE" "$GOTMPDIR" "$TEST_TELEMETRY_DIR" "$XDG_CONFIG_HOME"
       - uses: actions/setup-go@v5
         with:
           go-version-file: Docker/privacy-diagnostic/go.mod
