@@ -3,6 +3,8 @@ import configparser
 import json
 from pathlib import Path
 import re
+import subprocess
+import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -18,6 +20,22 @@ def target(value):
 
 
 class InstallCatalogTests(unittest.TestCase):
+    def test_nginx_patch_preserves_custom_content_at_different_offsets(self):
+        legacy = b'    access_log /var/log/nginx/access.log privacy;\n'
+        for offset in (0, 5, 100):
+            with self.subTest(offset=offset), tempfile.TemporaryDirectory() as folder:
+                path = Path(folder) / 'Docker/config/nginx-realip'
+                path.parent.mkdir(parents=True)
+                original = b'# preserved prefix\n' * offset + (
+                    b'    # BOTH FILES MUST SHIP TOGETHER -- this line without that file fails nginx -t.\n'
+                    + legacy + b'\n    # preserved suffix and custom routing\n')
+                path.write_bytes(original)
+                result = subprocess.run(['patch', '--batch', '--fuzz=0', '-p1', '-d', folder,
+                                         '-i', str(ROOT / 'Docker/privacy/nginx-realip.patch')],
+                                        capture_output=True, timeout=10)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertEqual(path.read_bytes(), original.replace(legacy, b'', 1))
+
     def test_sources_exist_and_exclude_deferred_mail_and_test_material(self):
         data = catalog()
         self.assertEqual(data['scope'], 'non-mail-privacy-overlay')

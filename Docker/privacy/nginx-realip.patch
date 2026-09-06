@@ -1,7 +1,6 @@
 --- a/Docker/config/nginx-realip
 +++ b/Docker/config/nginx-realip
-@@ -17,4 +17,3 @@
-     # context, /etc/nginx/conf.d/) because log_format is invalid in a server block.
+@@ -18,3 +18,2 @@
      # BOTH FILES MUST SHIP TOGETHER -- this line without that file fails nginx -t.
 -    access_log /var/log/nginx/access.log privacy;
  
