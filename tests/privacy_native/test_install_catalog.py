@@ -36,6 +36,11 @@ class InstallCatalogTests(unittest.TestCase):
                 self.assertFalse(item['source'].startswith('tests/'))
                 self.assertNotIn('exim', item['source'])
                 self.assertNotIn(path.name, ('process-email.sh', 'process_email.py'))
+                if 'patch' in item:
+                    self.assertEqual(item['existing'], 'apply-privacy-diff')
+                    patch = ROOT / item['patch']
+                    self.assertTrue(patch.resolve().is_relative_to(ROOT / 'Docker/privacy'))
+                    self.assertTrue(patch.read_text().startswith('--- a/' + item['source'] + '\n+++ b/' + item['source'] + '\n'))
                 if path.suffix == '.py':
                     self.assertEqual(path.name, 'log_initialize.py')
                     self.assertTrue(all(not line.strip() or line.lstrip().startswith('#') for line in path.read_text().splitlines()))

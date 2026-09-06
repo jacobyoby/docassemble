@@ -200,6 +200,7 @@ def ready(path, marker, port=80):
 
 
 def routes():
+    ready('/kept-realip.pdf', b'JOS81_KEEP_REALIP\n')
     ready('/kept-rewrite', b'JOS81_KEEP_REWRITE')
     ready('/', b'JOS81_KEEP_SITE', 8088)
     ready('/nj/', b'JOS81_APPLICATION_OK')
@@ -308,6 +309,7 @@ def seed():
     assert Path('/var/run/docassemble/ready').exists()
     assert all(statuses()[name] == 'RUNNING' for name in COMPONENTS)
     WORK.mkdir(mode=0o700)
+    run(sys.executable, '-I', '-B', str(REPO / 'tests/privacy_native/check_maintenance_image.py'), 'baseline')
     template = Path(ROOT + '/config/nginx-http.dist')
     text = template.read_text()
     assert 'form_rewrite_rules' not in text

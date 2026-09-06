@@ -78,7 +78,9 @@ func ValidateNginx(data []byte) error {
 		f.index++
 		name, args := item.words[0], item.words[1:]
 		if name == "include" {
-			if item.block || len(args) != 1 || strings.Contains(args[0], "$") {
+			// Escaped glob paths require POSIX glob semantics outside this
+			// supported include subset; do not interpret them approximately.
+			if item.block || len(args) != 1 || strings.ContainsAny(args[0], "$\\") {
 				return ErrConfig
 			}
 			pattern := args[0]

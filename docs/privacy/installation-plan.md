@@ -3,13 +3,13 @@
 GitHub tracking: [JOS-81, issue 22](https://github.com/jacobyoby/docassemble/issues/22).
 
 Status: the [explicit file catalog](install-catalog.json) is checked by the
-existing privacy test suite. It lists 35 required files, 26 rollback/state requirements
-and 15 protected paths. It is a file list, not a new release framework or an
-installer. [Native CI at a32541b4d](https://github.com/jacobyoby/docassemble/actions/runs/34009497006)
-passed installation, real queue/cron execution, launcher shutdown and rollback
-for the prior 30-file catalog. The added outer maintenance scripts and
-[initialization/copy/restore acceptance](maintenance-capture-go.md) require
-their own candidate CI. Production has not been changed. The
+existing privacy test suite. It lists 36 required files, 26 rollback/state requirements
+and 14 protected paths. It is a file list, not a new release framework or an
+installer. [Native CI at c09aba80c](https://github.com/jacobyoby/docassemble/actions/runs/34011607496)
+passed the 35-file installation, real queue/cron, maintenance, shutdown/restore,
+interrupted-start protection and rollback. The additional one-line migration
+of customized `nginx-realip` and native escape parsing need their own candidate
+CI. Production has not been changed. The
 [release review](review-2026-09-05.md) still blocks deployment. This inventory
 does not resume the [deferred Go mail replacement](deferred-mail-go.md).
 
@@ -30,8 +30,8 @@ routes, counter validation and protected-file checks, but tar rejected restoring
 the `/var/run/uwsgi` directory through the image's `/var/run` link. The rehearsal
 now restores directory metadata explicitly and archives only files/links.
 Queue and interview-cron acceptance subsequently passed on a32541b4d.
-The current maintenance extension adds a whole-container stop/start before
-rollback; source assertions alone do not establish that new lifecycle.
+The maintenance extension passed whole-container stop/start before rollback
+at c09aba80c. The native tests must pass again for each final candidate.
 
 Existing `tools/deployCore.sh` copies in the NJForms release worktrees export
 and install only the base/webapp packages, back up those two package directories
@@ -80,11 +80,20 @@ it differs from the source hash. Unsafe retained configuration still blocks
 installation; this policy is not permission to bypass preflight.
 
 For `existing: apply-privacy-diff`, apply only this candidate's privacy changes
-to the snapshotted target initializer and daily cron script. Preserve unrelated target lines. Record
+to the snapshotted target initializer, daily cron script and `nginx-realip`. Preserve unrelated target lines. Record
 the actual resulting hash and inspect the diff before installation; a source
 hash alone cannot verify that result. Other entries require reviewed replacement
 and the listed ownership/mode. These are review instructions for the existing
 copy/patch tools, not an implemented installer.
+
+The `nginx-realip` entry names an explicit patch because the installed files
+contain extensive custom routes absent from the five-line source default.
+Require exactly one known legacy `access_log /var/log/nginx/access.log privacy;`
+line, apply the patch without fuzz and verify that removing this line is the
+entire byte difference. Main HTTP logging then supplies the bounded counter
+format. Snapshot and restore the complete original file and metadata; never
+install the source default over these customized files. Retain the unused
+legacy format definition. Other unsafe directives still fail preflight.
 
 `initialize.sh` renders the main and log uWSGI profiles; `run-nginx.sh` renders
 the site configurations. Read-only mode skips generation. Existing volumes

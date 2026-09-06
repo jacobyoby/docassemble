@@ -56,12 +56,14 @@ update waits for initialization readiness before checking state or restoring
 counter metadata. The old initializer's normal log-directory ownership pass
 must finish first.
 
-These additions require native CI before acceptance is claimed. Historical
+[Native CI at c09aba80c](https://github.com/jacobyoby/docassemble/actions/runs/34011607496)
+passes these lifecycle additions, including the full install and rollback job.
+Historical
 diagnostic content is preserved separately from new private-output markers.
 Scans cover current, rotated, copied and local/rolling backup diagnostic
 destinations; application documents and database dumps are not treated as logs.
 Target checks establish local backups and disable S3/Azure. Conditional cloud,
 Apache and explicit log-role paths, arbitrary third-party handlers and manual
-bypasses are not proven by this fixture. Native CI for the added lifecycle
-controls and final target-specific release checks remain open. Mail stays
+bypasses are not proven by this fixture. Final candidate CI and target-specific
+release checks remain open. Mail stays
 deferred and its rotation stanza is excluded.

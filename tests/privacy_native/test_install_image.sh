@@ -34,6 +34,7 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 # Generate the source privacy delta from the reviewed base; do not duplicate it in a fixture.
 git -C "$REVIEW_ROOT" diff 63d22c44b7bd008a521f0bcb8ab442b2143ee557 -- Docker/initialize.sh Docker/cron/docassemble-cron-daily.sh > "$REVIEW_BUILD/overlay-privacy.patch"
+cat "$REVIEW_ROOT/Docker/privacy/nginx-realip.patch" >> "$REVIEW_BUILD/overlay-privacy.patch"
 test -s "$REVIEW_BUILD/overlay-privacy.patch"
 for REVIEW_COMPONENT in diagnostic process preflight monitor; do
     REVIEW_PACKAGE="./cmd/privacy-$REVIEW_COMPONENT"

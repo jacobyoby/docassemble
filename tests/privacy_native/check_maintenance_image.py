@@ -17,6 +17,30 @@ HOOK = Path(install.SITE + '/docassemble/webapp/starthook.py')
 HISTORY = b'JOS81_HISTORICAL_NGINX'
 SHUTDOWN = b'JOS81_SHUTDOWN_BACKUP'
 RESTORE = b'JOS81_BACKUP_ONLY_RESTORE'
+LEGACY_ACCESS = b'    access_log /var/log/nginx/access.log privacy;\n'
+
+
+def baseline():
+    realip = ROOT / 'config/nginx-realip'
+    # Model the legacy override and preserved regex/payload syntax observed on
+    # both targets, while keeping all fixture routes and contents synthetic.
+    realip.write_bytes(realip.read_bytes() + b'''
+    # context, /etc/nginx/conf.d/) because log_format is invalid in a server block.
+    # BOTH FILES MUST SHIP TOGETHER -- this line without that file fails nginx -t.
+    access_log /var/log/nginx/access.log privacy;
+
+    location ~ ^/kept-realip\\.pdf$ { return 200 'JOS81_KEEP_REALIP\\n'; }
+''')
+    Path('/etc/nginx/conf.d/privacy-log.conf').write_text(
+        "log_format privacy '[$time_local] $request_method $uri $status';\n")
+    (WORK / 'realip-original').write_bytes(realip.read_bytes())
+
+
+def nginx_customization():
+    original = (WORK / 'realip-original').read_bytes()
+    assert original.count(LEGACY_ACCESS) == 1
+    assert (ROOT / 'config/nginx-realip').read_bytes() == original.replace(LEGACY_ACCESS, b'', 1)
+    install.ready('/kept-realip.pdf', b'JOS81_KEEP_REALIP\n')
 
 
 def scan():
@@ -86,6 +110,7 @@ def command(path, expected=0, **env):
 
 
 def prepare():
+    nginx_customization()
     initializer()
     history = Path('/var/log/nginx/jos81-history')
     history.write_bytes(HISTORY)
@@ -139,6 +164,7 @@ def prepare():
 
 
 def resume():
+    nginx_customization()
     install.routes()
     initializer()
     before = json.loads((WORK / 'lifecycle.json').read_text())
@@ -163,5 +189,5 @@ def resume():
 
 
 if __name__ == '__main__':
-    assert sys.argv[1:] in (['seed'], ['prepare'], ['resume'])
-    {'seed': seed, 'prepare': prepare, 'resume': resume}[sys.argv[1]]()
+    assert sys.argv[1:] in (['baseline'], ['seed'], ['prepare'], ['resume'])
+    {'baseline': baseline, 'seed': seed, 'prepare': prepare, 'resume': resume}[sys.argv[1]]()

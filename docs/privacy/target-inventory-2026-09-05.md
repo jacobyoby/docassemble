@@ -151,3 +151,27 @@ The unchanged initializer's local restore branch unconditionally assigns
 33:33; a fresh image's root-owned configuration is a different starting state.
 Contents and all ownership/permission comparisons remain exact throughout the
 fixture. Evidence: `tests/.privacy-build/maintenance-review/target-config-metadata.json`.
+
+
+## Customized nginx follow-up
+
+Successful read-only `nginx -T -e stderr` checks expose nine file sections on
+both targets. Their `config/nginx-realip` files contain 519 lines (Forma) and
+598 lines (Demo), including routes and page customizations. Both override the
+HTTP logger with exactly one `access_log /var/log/nginx/access.log privacy;`
+line. The five-line repository default must never replace these files.
+
+The explicit catalog patch removes only that line; local copies from both
+targets accept it without fuzz and preserve all other bytes. Both synthesized
+candidate dumps pass Go policy after this migration, retaining all observed
+include sections. This is not a native check of the candidate or an install.
+Current production syntax was checked; candidate native/served checks remain.
+
+The parser now follows Nginx 1.28.3 escape decoding for quoted payloads and
+quoted/unquoted regexes, preserving unknown escapes. It does not expand support
+for escaped include globs. Primary reference: [ngx_conf_read_token, pinned
+Nginx source](https://github.com/nginx/nginx/blob/9b958b000776c88036cd800c66e7e4ad39e6fd41/src/core/ngx_conf_file.c#L627).
+Two exact frozen-reference inputs intentionally change from rejection to
+acceptance; the frozen source itself remains unchanged. Synthetic native
+fixtures cover escaped quotes, a quoted fake dump header, regex escapes and
+an unsafe file destination containing an escaped delimiter.

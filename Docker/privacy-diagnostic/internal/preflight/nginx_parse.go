@@ -25,7 +25,7 @@ func dumpFiles(source string) (string, map[string]string, error) {
 	first, current := "", ""
 	var body strings.Builder
 	var quote rune
-	active := false
+	active, escaped := false, false
 	finish := func() bool {
 		if current != "" {
 			content := body.String()
@@ -37,7 +37,7 @@ func dumpFiles(source string) (string, map[string]string, error) {
 		return true
 	}
 	for _, line := range lines(source) {
-		if quote == 0 {
+		if quote == 0 && !active && !escaped {
 			if match := header.FindStringSubmatch(line); match != nil {
 				if !finish() || cleanPath(match[1]) != match[1] {
 					return "", nil, ErrConfig
@@ -55,30 +55,28 @@ func dumpFiles(source string) (string, map[string]string, error) {
 		}
 		body.WriteString(line)
 		for _, char := range line {
-			if quote != 0 {
-				if char == '\\' {
-					return "", nil, ErrConfig
-				}
+			if escaped {
+				escaped = false
+				continue
+			}
+			if char == '\\' {
+				escaped, active = true, true
+			} else if quote != 0 {
 				if char == quote {
 					quote = 0
 				}
 			} else if char == '#' && !active {
 				break
-			} else if char == '"' || char == '\'' {
+			} else if !active && (char == '"' || char == '\'') {
 				quote, active = char, true
-			} else if char == '\\' {
-				return "", nil, ErrConfig
 			} else if space(char) || strings.ContainsRune(";{}", char) {
 				active = false
 			} else {
 				active = true
 			}
 		}
-		if quote == 0 {
-			active = false
-		}
 	}
-	if quote != 0 || first == "" || !finish() {
+	if quote != 0 || escaped || first == "" || !finish() {
 		return "", nil, ErrConfig
 	}
 	return first, files, nil
@@ -112,10 +110,28 @@ func tokens(source string) ([]token, error) {
 			afterQuote = false
 		}
 		switch {
-		case quote != 0:
-			if char == '\\' {
+		case char == '\\':
+			if i+1 == len(chars) {
 				return nil, ErrConfig
 			}
+			i++
+			// ngx_conf_read_token: only these escapes are decoded. Unknown
+			// escapes retain the backslash, including regex \., \b and \?.
+			switch chars[i] {
+			case 't':
+				word.WriteRune('\t')
+			case 'r':
+				word.WriteRune('\r')
+			case 'n':
+				word.WriteRune('\n')
+			case '\\', '"', '\'':
+				word.WriteRune(chars[i])
+			default:
+				word.WriteRune('\\')
+				word.WriteRune(chars[i])
+			}
+			active = true
+		case quote != 0:
 			if char == quote {
 				quote, afterQuote = 0, true
 			} else {
@@ -130,8 +146,6 @@ func tokens(source string) ([]token, error) {
 				return nil, ErrConfig
 			}
 			quote, active = char, true
-		case char == '\\':
-			return nil, ErrConfig
 		case char == '$' && i+1 < len(chars) && chars[i+1] == '{':
 			end := i + 2
 			for end < len(chars) && chars[end] != '}' {
