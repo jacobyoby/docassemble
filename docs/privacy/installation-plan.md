@@ -100,7 +100,10 @@ actual runtime paths explicitly before any custom-root installation.
    logs outside broad replacement or deletion operations.
 2. Quiesce ingress and scheduled producers, stop the websocket/front end, drain
    workers and stop uWSGI services. Keep the monitor until affected services
-   have stopped. Rehearse this order with actual service roles and deadlines.
+   have stopped. Stop NLTK before a `main` group update as well: the existing
+   initializer removes its socket before starting it, so an already-running
+   NLTK process would leave startup waiting on an unlinked socket. Rehearse
+   this order with actual service roles and deadlines.
    Precreate and assign ownership to every counter file before restarting any
    service. Current initialization starts Celery before its later ownership
    block, so that block cannot serve as the installer's pre-start guarantee.

@@ -101,7 +101,7 @@ def statuses():
 
 
 def stop_services():
-    for name in ('nginx', 'cron', 'exim4', 'websockets', 'celery', 'celerysingle', 'uwsgi', 'privacy-monitor'):
+    for name in ('nginx', 'cron', 'exim4', 'websockets', 'celery', 'celerysingle', 'uwsgi', 'nltk', 'privacy-monitor'):
         if statuses().get(name) == 'RUNNING':
             RPC.supervisor.stopProcess(name, True)
     check = subprocess.run(['pgrep', '-x', 'uwsgi'], capture_output=True)
@@ -128,7 +128,10 @@ def start_services(candidate):
     deadline = time.monotonic() + 240
     while not Path('/var/run/docassemble/ready').exists():
         assert statuses().get('initialize') in ('STARTING', 'RUNNING'), 'initializer failed'
-        assert time.monotonic() < deadline, 'initializer readiness deadline exceeded'
+        assert time.monotonic() < deadline, (
+            'initializer readiness deadline exceeded; states=' + str(statuses()) +
+            '; nltk_socket=' + str(Path('/var/run/nltk/da_nltk.sock').exists()) +
+            '; startup_receipt=' + str((WORK / 'startup-receipt').exists()))
         time.sleep(0.5)
     original = json.loads((WORK / 'services.json').read_text())
     for name, value in original.items():
