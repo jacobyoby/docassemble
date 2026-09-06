@@ -86,3 +86,10 @@ else:
 PY
 timeout -k 5 600 docker exec "$REVIEW_CONTAINER" /usr/share/docassemble/local3.14/bin/python \
     -I -B /review/tests/privacy_native/check_install_image.py
+python3.14 -B - "$REVIEW_CONTAINER" <<'PY'
+import subprocess
+import sys
+result = subprocess.run(['docker', 'logs', sys.argv[1]], capture_output=True, timeout=15, check=True)
+assert b'JOS81_PRIVATE_' not in result.stdout + result.stderr, 'private output in container logs'
+print('private queue/cron markers absent from container stdout/stderr logs')
+PY

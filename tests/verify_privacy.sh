@@ -58,6 +58,7 @@ bash -n Docker/run-uwsgilog.sh
 bash -n Docker/run-celery.sh
 bash -n Docker/run-celery-single.sh
 bash -n Docker/run-websockets.sh
+bash -n Docker/run-cron.sh
 bash -n Docker/process-email.sh
 bash -n Docker/initialize.sh
 bash -n tests/verify_privacy.sh

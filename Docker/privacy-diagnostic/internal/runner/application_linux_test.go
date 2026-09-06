@@ -14,7 +14,7 @@ import (
 )
 
 func TestApplicationWorkersFinishInsideMasterGraceWindow(t *testing.T) {
-	for _, profile := range []string{"celery", "celerysingle", "websockets", "mail"} {
+	for _, profile := range []string{"celery", "celerysingle", "websockets", "mail", "cron"} {
 		for _, parentDeath := range []bool{false, true} {
 			t.Run(fmt.Sprintf("%s/parent-death-%v", profile, parentDeath), func(t *testing.T) {
 				self, err := os.Executable()

@@ -31,7 +31,7 @@ type options struct {
 
 func (o options) groupDelay() time.Duration {
 	switch o.component {
-	case aggregate.Celery, aggregate.CelerySingle, aggregate.Websockets, aggregate.Mail:
+	case aggregate.Celery, aggregate.CelerySingle, aggregate.Websockets, aggregate.Mail, aggregate.Cron:
 		return o.stopWait // Allow the service master its full worker-drain window.
 	default:
 		return o.stopWait / 2
@@ -58,7 +58,7 @@ func parse(args []string) (options, bool) {
 	switch component {
 	case aggregate.Celery, aggregate.CelerySingle:
 		stopWait = 60 * time.Second
-	case aggregate.Websockets, aggregate.Mail:
+	case aggregate.Websockets, aggregate.Mail, aggregate.Cron:
 		stopWait = 20 * time.Second
 	}
 	return options{component: component, command: slices.Clone(args[3:]), sinkFD: 1,
@@ -66,10 +66,10 @@ func parse(args []string) (options, bool) {
 		stopWait: stopWait, killWait: time.Second}, true
 }
 
-// Run accepts --component nginx|uwsgi|celery|celerysingle|websockets|mail -- /absolute/executable [arguments...].
+// Run accepts --component nginx|uwsgi|celery|celerysingle|websockets|mail|cron -- /absolute/executable [arguments...].
 // It never prints arguments, paths, errors, or captured native output.
-// Mail alone passes stdin to the child, emits only a final snapshot, and maps
-// every failure or interrupted delivery to EX_TEMPFAIL.
+// Mail and cron emit only a final snapshot. Mail alone passes stdin to the child
+// and maps every failure or interrupted delivery to EX_TEMPFAIL.
 func Run(args []string) int {
 	opts, ok := parse(args)
 	if !ok {

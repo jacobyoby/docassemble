@@ -32,7 +32,7 @@ func TestApplicationProfilesRetainServiceShutdownWindows(t *testing.T) {
 	for _, item := range []struct {
 		name string
 		wait time.Duration
-	}{{"celery", 60 * time.Second}, {"celerysingle", 60 * time.Second}, {"websockets", 20 * time.Second}, {"mail", 20 * time.Second}} {
+	}{{"celery", 60 * time.Second}, {"celerysingle", 60 * time.Second}, {"websockets", 20 * time.Second}, {"mail", 20 * time.Second}, {"cron", 20 * time.Second}} {
 		opts, ok := parse([]string{"--component", item.name, "--", "/synthetic/service"})
 		if !ok || opts.stopWait != item.wait || opts.groupDelay() != item.wait || opts.killWait != time.Second || opts.sinkWait != 5*time.Second {
 			t.Fatalf("application lifecycle profile unavailable: %s", item.name)

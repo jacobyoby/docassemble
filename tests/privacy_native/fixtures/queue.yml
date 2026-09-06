@@ -1,0 +1,28 @@
+metadata:
+  title: Synthetic queued-job check
+---
+mandatory: True
+code: |
+  queue_job
+  if queue_job.ready():
+    assert queue_job.get() == 'JOS81_QUEUE_RESULT'
+    queue_done
+  else:
+    queue_wait
+---
+code: |
+  queue_job = background_action('queue_work')
+---
+event: queue_work
+code: |
+  import os
+  os.write(1, b'JOS81_PRIVATE_QUEUE_STDOUT\n')
+  os.write(2, b'JOS81_PRIVATE_QUEUE_STDERR\n')
+  background_response('JOS81_QUEUE_RESULT')
+---
+event: queue_wait
+question: JOS81_QUEUE_WAIT
+reload: True
+---
+event: queue_done
+question: JOS81_QUEUE_OK

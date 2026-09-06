@@ -1,5 +1,8 @@
 """Full-image installation/rollback test using only synthetic local data."""
 import hashlib
+import gzip
+from http.cookies import SimpleCookie
+from http.client import HTTPConnection, HTTPException
 import json
 import os
 from pathlib import Path
@@ -9,8 +12,7 @@ import stat
 import subprocess
 import sys
 import time
-import urllib.request
-import urllib.error
+from urllib.parse import urlsplit
 import xmlrpc.client
 
 REPO = Path(__file__).resolve().parents[2]
@@ -39,7 +41,7 @@ def records(data, component):
         assert value['schema'] == 1 and value['component'] == component, 'counter identity'
         assert all(type(count) is int and 0 <= count <= 2147483647
                    for key, count in value.items() if key != 'component'), 'counter bounds'
-        if component in ('celery', 'celerysingle', 'websockets'):
+        if component in ('celery', 'celerysingle', 'websockets', 'cron'):
             assert all(count == 0 for key, count in value.items()
                        if key.startswith(('status_', 'latency_'))), 'application request counts'
     return values
@@ -133,12 +135,33 @@ def start_services(candidate):
     assert all(statuses()[name] == 'RUNNING' for name in COMPONENTS)
 
 
-def fetch(path, port=80):
-    request = urllib.request.Request('http://127.0.0.1:' + str(port) + path, headers={'Host': 'privacy-install.test'})
-    with urllib.request.urlopen(request, timeout=15) as response:
-        body = response.read(2_000_000)
+def fetch(path, port=80, cookies=None):
+    for unused in range(6):
+        headers = {'Host': 'privacy-install.test'}
+        if cookies:
+            headers['Cookie'] = '; '.join(value.OutputString(attrs=[]) for value in cookies.values())
+        connection = HTTPConnection('127.0.0.1', port, timeout=15)
+        try:
+            connection.request('GET', path, headers=headers)
+            response = connection.getresponse()
+            body = response.read(2_000_001)
+            assert len(body) <= 2_000_000, 'oversized synthetic response'
+            if cookies is not None:
+                for key, value in response.getheaders():
+                    if key.lower() == 'set-cookie':
+                        cookies.load(value)
+            location = response.getheader('Location')
+        finally:
+            connection.close()
+        if response.status in (301, 302, 303, 307, 308):
+            assert location, 'redirect has no destination'
+            target = urlsplit(location)
+            assert target.netloc in ('', 'privacy-install.test', '127.0.0.1'), 'non-fixture redirect'
+            path = (target.path or '/') + ('?' + target.query if target.query else '')
+            continue
         assert response.status == 200
         return body
+    raise AssertionError('too many fixture redirects')
 
 
 def ready(path, marker, port=80):
@@ -148,7 +171,7 @@ def ready(path, marker, port=80):
             body = fetch(path, port)
             assert marker in body and b'is starting' not in body
             return
-        except (urllib.error.URLError, TimeoutError, AssertionError):
+        except (OSError, HTTPException, AssertionError):
             if time.monotonic() >= deadline:
                 raise
             time.sleep(0.5)
@@ -160,6 +183,77 @@ def routes():
     ready('/nj/', b'JOS81_APPLICATION_OK')
 
 
+def private_output_absent(roots):
+    marker = b'JOS81_PRIVATE_'
+    total = 0
+    for root in roots:
+        assert root.is_dir(), 'missing retained-output directory'
+        for path in root.rglob('*'):
+            if path.is_symlink() or not path.is_file():
+                continue
+            opener = gzip.open if path.suffix == '.gz' else open
+            tail = b''
+            with opener(path, 'rb') as stream:
+                while chunk := stream.read(65536):
+                    total += len(chunk)
+                    assert total <= 64 * 1024 * 1024, 'synthetic log scan exceeded bound'
+                    assert marker not in tail + chunk, 'private output retained in ' + str(path)
+                    tail = chunk[-len(marker):]
+
+
+def queued_job():
+    before = read_counters()['celery'][-1]['unclassified']
+    # Explicit cookies are confined to this fixed loopback fixture. Secure cookies
+    # otherwise would be dropped by an HTTP CookieJar behind the HTTPS proxy fixture.
+    cookies = SimpleCookie()
+    path = '/nj/?i=docassemble.privacyfixture:data/questions/queue.yml'
+    deadline = time.monotonic() + 45
+    while time.monotonic() < deadline:
+        body = fetch(path, cookies=cookies)
+        if b'JOS81_QUEUE_OK' in body:
+            break
+        assert b'JOS81_QUEUE_WAIT' in body, 'unexpected queue interview response'
+        time.sleep(0.5)
+    else:
+        raise AssertionError('queued job did not return its expected result')
+    assert cookies, 'queue check did not preserve an interview session'
+    for unused in range(50):
+        if read_counters()['celery'][-1]['unclassified'] >= before + 2:
+            break
+        time.sleep(0.2)
+    else:
+        raise AssertionError('queued stdout/stderr did not advance Celery counters')
+    private_output_absent((Path(ROOT + '/log'), Path('/var/log')))
+    print('real queued job returned its result; stdout/stderr counted; private markers absent from logs', flush=True)
+
+
+def cron_interview():
+    cookies = SimpleCookie()
+    path = '/nj/?i=docassemble.privacyfixture:data/questions/cron.yml'
+    assert b'JOS81_CRON_COUNT_0' in fetch(path, cookies=cookies)
+    output = run('bash', ROOT + '/webapp/run-cron.sh', 'cron_hourly')
+    values = records(output, 'cron')
+    assert len(values) == 1 and values[0]['unclassified'] >= 2, 'cron output was not counted once'
+    assert b'JOS81_CRON_COUNT_1' in fetch(path, cookies=cookies), 'cron did not save its session changes'
+    failure = subprocess.run(['env', 'DA_CONFIG=/nonexistent/JOS81_PRIVATE_CONFIG',
+                              'bash', ROOT + '/webapp/run-cron.sh', 'cron_hourly'],
+                             capture_output=True, timeout=30)
+    assert failure.returncode == 70 and not failure.stderr
+    expected = [dict(schema=1, component='cron', event='startup_failed', phase='config'),
+                dict(schema=1, component='cron', event='command_failed', phase='execution')]
+    assert [json.loads(line) for line in failure.stdout.splitlines()] == expected
+    # Inject a missing privilege-drop executable into an otherwise exact launcher copy.
+    source = Path(ROOT + '/webapp/run-cron.sh').read_text()
+    assert source.count('/usr/bin/setpriv') == 1
+    broken = WORK / 'missing-privilege-drop.sh'
+    broken.write_text(source.replace('/usr/bin/setpriv', '/nonexistent/JOS81_PRIVATE_EXEC'))
+    failure = subprocess.run(['bash', str(broken)], capture_output=True, timeout=15)
+    assert failure.returncode == 127 and not failure.stderr
+    assert [json.loads(line) for line in failure.stdout.splitlines()] == expected[-1:]
+    private_output_absent((Path(ROOT + '/log'), Path('/var/log')))
+    print('real cron interview saved its result; response/stderr reduced to one safe snapshot', flush=True)
+
+
 def configure():
     import yaml  # Existing application dependency, not a new test/service dependency.
     package = Path(SITE + '/docassemble/privacyfixture')
@@ -168,6 +262,8 @@ def configure():
     (package / 'data/questions/install.yml').write_text(
         'metadata:\n  title: Privacy installation check\n---\nmandatory: True\n'
         'question: Privacy installation check\nsubquestion: JOS81_APPLICATION_OK\n')
+    shutil.copyfile(REPO / 'tests/privacy_native/fixtures/queue.yml', package / 'data/questions/queue.yml')
+    shutil.copyfile(REPO / 'tests/privacy_native/fixtures/cron.yml', package / 'data/questions/cron.yml')
     path = Path(ROOT + '/config/config.yml')
     config = yaml.safe_load(path.read_text())
     assert config['allow demo'] is False
@@ -356,4 +452,8 @@ if __name__ == '__main__':
     configure()
     seed()
     install()
+    queued_job()
+    cron_interview()
+    print(run(sys.executable, '-I', '-B', str(REPO / 'tests/privacy_native/check_cron_launcher.py'), timeout=160).decode(), end='', flush=True)
     rollback()
+    private_output_absent((Path(ROOT + '/log'), Path('/var/log')))

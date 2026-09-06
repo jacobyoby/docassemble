@@ -58,7 +58,7 @@ func capture(t *testing.T, args []string) (int, []byte) {
 }
 
 func TestEveryAllowedComponentAndPhase(t *testing.T) {
-	for _, comp := range []string{"nginx", "uwsgi", "uwsgilog", "celery", "celerysingle", "websockets", "mail"} {
+	for _, comp := range []string{"nginx", "uwsgi", "uwsgilog", "celery", "celerysingle", "websockets", "mail", "cron"} {
 		for _, stage := range []string{"activation", "config", "config_eval", "preflight", "launch"} {
 			t.Run(comp+"/"+stage, func(t *testing.T) {
 				code, data := capture(t, []string{comp, stage})
@@ -92,6 +92,18 @@ func TestInvalidArgumentsCannotEnterOutput(t *testing.T) {
 		if string(data) != want {
 			t.Fatalf("nonconstant invalid-input record: %q", data)
 		}
+	}
+}
+
+func TestCronExecutionFailureUsesAGenericFixedEvent(t *testing.T) {
+	code, data := capture(t, []string{"cron", "execution"})
+	want := "{\"schema\":1,\"component\":\"cron\",\"event\":\"command_failed\",\"phase\":\"execution\"}\n"
+	if code != startupFailure || string(data) != want {
+		t.Fatalf("cron execution failure changed: %d %q", code, data)
+	}
+	code, _ = capture(t, []string{"mail", "execution"})
+	if code != usageFailure {
+		t.Fatal("cron-only execution phase escaped its component")
 	}
 }
 
@@ -206,6 +218,7 @@ func TestNonpositiveTimeoutCannotWrite(t *testing.T) {
 
 func FuzzParseHasFixedBoundedOutput(f *testing.F) {
 	f.Add("uwsgi", "activation")
+	f.Add("cron", "execution")
 	f.Add("private\nvalue", "private\nphase")
 	f.Fuzz(func(t *testing.T, comp, stage string) {
 		record, code := parse([]string{comp, stage})

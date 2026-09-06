@@ -238,9 +238,10 @@ func (x *execution) loop(stops, hup, reopen <-chan os.Signal) int {
 		}
 		x.advanceStop(now, alive)
 		final := x.forced || x.exited && !alive && x.ended[0] && x.ended[1]
-		// Exim limits total command output. Mail emits at most one final
-		// record; service profiles retain their periodic progress counters.
-		report := final || x.opts.component != aggregate.Mail && !now.Before(x.nextWrite)
+		// Finite mail/cron commands emit at most one final record; services
+		// retain periodic progress counters. Mail's delivery semantics are separate.
+		periodic := x.opts.component != aggregate.Mail && x.opts.component != aggregate.Cron
+		report := final || periodic && !now.Before(x.nextWrite)
 		if x.failure == 0 && !x.writing && x.dirty && report {
 			x.write(now)
 		}

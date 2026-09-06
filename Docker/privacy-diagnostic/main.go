@@ -1,4 +1,4 @@
-// privacy-diagnostic emits one fixed startup failure record to a bounded pipe.
+// privacy-diagnostic emits one fixed failure record to a bounded pipe.
 // It accepts no message text, configuration, paths, or exception details.
 package main
 
@@ -27,6 +27,7 @@ const (
 	celerySingle
 	websockets
 	mail
+	cron
 )
 
 type phase uint8
@@ -38,6 +39,7 @@ const (
 	configEval
 	preflight
 	launch
+	execution
 )
 
 type failure struct {
@@ -73,6 +75,8 @@ func parse(args []string) (failure, int) {
 		f.component = websockets
 	case "mail":
 		f.component = mail
+	case "cron":
+		f.component = cron
 	default:
 		return invalid, usageFailure
 	}
@@ -87,6 +91,11 @@ func parse(args []string) (failure, int) {
 		f.phase = preflight
 	case "launch":
 		f.phase = launch
+	case "execution":
+		if f.component != cron {
+			return invalid, usageFailure
+		}
+		f.phase = execution
 	default:
 		return invalid, usageFailure
 	}
@@ -95,12 +104,16 @@ func parse(args []string) (failure, int) {
 
 func encode(f failure) ([]byte, error) {
 	// All strings come from these constants, never from CLI values.
-	components := [...]string{"launcher", "nginx", "uwsgi", "uwsgilog", "celery", "celerysingle", "websockets", "mail"}
-	phases := [...]string{"invocation", "activation", "config", "config_eval", "preflight", "launch"}
-	if int(f.component) >= len(components) || int(f.phase) >= len(phases) {
+	components := [...]string{"launcher", "nginx", "uwsgi", "uwsgilog", "celery", "celerysingle", "websockets", "mail", "cron"}
+	phases := [...]string{"invocation", "activation", "config", "config_eval", "preflight", "launch", "execution"}
+	if int(f.component) >= len(components) || int(f.phase) >= len(phases) || f.phase == execution && f.component != cron {
 		f = failure{launcher, invocation}
 	}
-	data, err := json.Marshal(wireRecord{1, components[f.component], "startup_failed", phases[f.phase]})
+	event := "startup_failed"
+	if f.phase == execution {
+		event = "command_failed"
+	}
+	data, err := json.Marshal(wireRecord{1, components[f.component], event, phases[f.phase]})
 	return append(data, '\n'), err
 }
 

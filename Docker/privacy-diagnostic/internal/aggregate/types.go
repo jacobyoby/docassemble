@@ -27,6 +27,7 @@ const (
 	CelerySingle
 	Websockets
 	Mail
+	Cron
 )
 
 type Stream uint8
@@ -56,12 +57,14 @@ func ParseComponent(name string) (Component, error) {
 		return Websockets, nil
 	case "mail":
 		return Mail, nil
+	case "cron":
+		return Cron, nil
 	default:
 		return 0, ErrComponent
 	}
 }
 
-func (c Component) application() bool { return c >= Celery && c <= Mail }
+func (c Component) application() bool { return c >= Celery && c <= Cron }
 
 func (c Component) valid() bool { return c == Nginx || c == UWsgi || c.application() }
 
@@ -81,6 +84,8 @@ func (c Component) name() string {
 		return "websockets"
 	case Mail:
 		return "mail"
+	case Cron:
+		return "cron"
 	}
 	return ""
 }

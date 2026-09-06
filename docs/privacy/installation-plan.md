@@ -3,10 +3,12 @@
 GitHub tracking: [JOS-81, issue 22](https://github.com/jacobyoby/docassemble/issues/22).
 
 Status: the [explicit file catalog](install-catalog.json) is checked by the
-existing privacy test suite. It lists 29 required files, 26 rollback/state requirements
+existing privacy test suite. It lists 30 required files, 26 rollback/state requirements
 and 15 protected paths. It is a file list, not a new release framework or an
-installer. No development installation, rollback rehearsal or production cutover
-has passed in full. The
+installer. [Native CI at 978d8fb63](https://github.com/jacobyoby/docassemble/actions/runs/34008439014)
+passed installation and rollback for the prior 29-file catalog. The added
+`run-cron.sh` entry and real queue/cron acceptance require their own candidate
+CI. Production has not been changed. The
 [release review](review-2026-09-05.md) still blocks deployment. This inventory
 does not resume the [deferred Go mail replacement](deferred-mail-go.md).
 
@@ -23,8 +25,8 @@ routes, counter validation and protected-file checks, but tar rejected restoring
 the `/var/run/uwsgi` directory through the image's `/var/run` link. The rehearsal
 now restores directory metadata explicitly and archives only files/links. Native
 CI must pass rollback before claiming complete installation/rollback acceptance;
-queue jobs, cron output, independent writes and backup/restore remain separate
-open coverage requirements.
+the real queue/cron additions, outer scheduled commands, independent writes and
+backup/restore remain coverage requirements. See [interview-cron capture](cron-capture-go.md).
 
 Existing `tools/deployCore.sh` copies in the NJForms release worktrees export
 and install only the base/webapp packages, back up those two package directories
@@ -37,7 +39,7 @@ worktrees were inspected read-only and are unchanged.
 | Source in this worktree | Required installed state |
 | --- | --- |
 | `Docker/privacy-diagnostic/` | Four architecture-matched binaries in `${DA_ROOT}/webapp`: `privacy-diagnostic`, `privacy-process`, `privacy-preflight`, `privacy-monitor`; root-owned, mode 0755 |
-| `Docker/run-nginx.sh`, `run-uwsgi.sh`, `run-uwsgilog.sh`, `run-celery.sh`, `run-celery-single.sh`, `run-websockets.sh`, `initialize.sh` | Corresponding installed scripts under `${DA_ROOT}/webapp` |
+| `Docker/run-nginx.sh`, `run-uwsgi.sh`, `run-uwsgilog.sh`, `run-celery.sh`, `run-celery-single.sh`, `run-websockets.sh`, `run-cron.sh`, `initialize.sh` | Corresponding installed scripts under `${DA_ROOT}/webapp` |
 | `docassemble_webapp/docassemble/webapp/log_initialize.py` | Current comments-only module in the actual service virtualenv, installed together with native capture |
 | Four `Docker/config/docassemble*.ini*` profiles/templates | Input templates and correctly rendered active profiles under `${DA_ROOT}/config` |
 | `Docker/nginx.conf`, `Docker/privacy/nginx-lifecycle.conf`, nginx site templates | `/etc/nginx/nginx.conf`, `/usr/local/lib/docassemble-privacy/nginx-lifecycle.conf`, rendered sites and enabled symlinks |

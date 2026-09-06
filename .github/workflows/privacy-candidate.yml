@@ -20,6 +20,7 @@ on:
       - 'Docker/run-celery.sh'
       - 'Docker/run-celery-single.sh'
       - 'Docker/run-websockets.sh'
+      - 'Docker/run-cron.sh'
       - 'Docker/process-email.sh'
       - 'Docker/initialize.sh'
       - 'Dockerfile'

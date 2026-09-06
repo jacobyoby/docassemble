@@ -1,0 +1,24 @@
+metadata:
+  title: Synthetic cron termination check
+---
+mandatory: True
+code: |
+  allow_cron = True
+  multi_user = True
+---
+event: JOS81_CRON_STOP_EVENT
+code: |
+  import json
+  import os
+  import signal
+  import subprocess
+  worker = subprocess.Popen(['/bin/sleep', '120'])
+  os.write(1, b'JOS81_PRIVATE_CRON_STOP_STDOUT\n')
+  os.write(2, b'JOS81_PRIVATE_CRON_STOP_STDERR\n')
+  with open(os.environ['JOS81_CRON_PID_FILE'], 'w') as stream:
+    json.dump([os.getppid(), os.getpid(), worker.pid], stream)
+  while True:
+    signal.pause()
+---
+mandatory: True
+question: JOS81_CRON_STOP_READY
