@@ -206,7 +206,7 @@ def seed():
                 continue
             assert not path.exists() or path.stat().st_size == 0
             path.touch()
-            os.chmod(path, 0o640)
+            os.chmod(path, 0o400)
             os.chown(path, 0, 0)
     # A stopped producer must remain stopped after rollback.
     if statuses().get('cron') == 'RUNNING':
