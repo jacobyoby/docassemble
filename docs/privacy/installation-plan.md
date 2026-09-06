@@ -6,7 +6,7 @@ Status: the [explicit file catalog](install-catalog.json) is checked by the
 existing privacy test suite. It lists 29 required files, 26 rollback/state requirements
 and 15 protected paths. It is a file list, not a new release framework or an
 installer. No development installation, rollback rehearsal or production cutover
-has passed. The
+has passed in full. The
 [release review](review-2026-09-05.md) still blocks deployment. This inventory
 does not resume the [deferred Go mail replacement](deferred-mail-go.md).
 
@@ -18,7 +18,11 @@ and rollback metadata/service states. It does not publish an image or deploy.
 The local rehearsal reached a working stock application and custom routes, but
 GNU tar failed because both local user-mode emulators lack `openat2`. No candidate
 files were installed in that attempt and its partial archive is not rollback
-evidence. Native CI must pass before claiming installation/rollback acceptance;
+evidence. The first native CI run on PR #23 passed installation, real/custom
+routes, counter validation and protected-file checks, but tar rejected restoring
+the `/var/run/uwsgi` directory through the image's `/var/run` link. The rehearsal
+now restores directory metadata explicitly and archives only files/links. Native
+CI must pass rollback before claiming complete installation/rollback acceptance;
 queue jobs, cron output, independent writes and backup/restore remain separate
 open coverage requirements.
 

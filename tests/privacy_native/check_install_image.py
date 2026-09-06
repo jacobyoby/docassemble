@@ -240,7 +240,10 @@ def snapshot():
     baseline = {str(path): state(path) for path in paths}
     (WORK / 'baseline.json').write_text(json.dumps(baseline, indent=2))
     (WORK / 'protected.json').write_text(json.dumps(protected(), indent=2))
-    existing = [str(path).lstrip('/') for path in paths if baseline[str(path)]['kind'] != 'absent']
+    # Directory metadata is restored explicitly; archiving /var/run/uwsgi would
+    # make tar traverse the image's /var/run -> /run link during extraction.
+    existing = [str(path).lstrip('/') for path in paths
+                if baseline[str(path)]['kind'] not in ('absent', 'directory')]
     (WORK / 'restore-list.txt').write_text('\n'.join(existing) + '\n')
     run('tar', '--numeric-owner', '--no-recursion', '-cpf', str(WORK / 'rollback.tar'), '-C', '/', '-T', str(WORK / 'restore-list.txt'))
     print('baseline routes pass; file snapshot, counter metadata and service states saved', flush=True)
@@ -317,6 +320,10 @@ def rollback():
     run('tar', '--numeric-owner', '-xpf', str(WORK / 'rollback.tar'), '-C', '/')
     for path, value in sorted(expected.items(), key=lambda item: len(item[0]), reverse=True):
         item = Path(path)
+        if value['kind'] == 'directory':
+            assert item.is_dir() and not item.is_symlink()
+            os.chown(item, value['uid'], value['gid'])
+            os.chmod(item, value['mode'])
         if value['kind'] == 'absent' and item.is_dir():
             item.rmdir()
         assert state(item) == value, path + ' did not restore exactly'
