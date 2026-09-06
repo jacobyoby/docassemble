@@ -60,6 +60,18 @@ os.write(1, b'JOS81_PRIVATE_INITIALIZER_STDOUT\\n')
 os.write(2, b'JOS81_PRIVATE_INITIALIZER_STDERR\\n')
 with open('/tmp/jos81-rehearsal/startup-receipt', 'a') as receipt:
     receipt.write('emitted\\n')
+from pathlib import Path
+hold = Path('/tmp/jos81-rehearsal/hold-startup')
+if hold.exists():
+    import sys
+    import time
+    hold.unlink()
+    hold.with_name('startup-held').write_text('held')
+    deadline = time.monotonic() + 60
+    while not hold.with_name('release-startup').exists():
+        assert time.monotonic() < deadline, 'startup hold expired'
+        time.sleep(0.1)
+    sys.exit(0)
 """
     HOOK.write_bytes(prefix + original)
 
@@ -130,8 +142,10 @@ def resume():
     install.routes()
     initializer()
     before = json.loads((WORK / 'lifecycle.json').read_text())
-    assert (WORK / 'startup-receipt').read_text().count('emitted\n') > before['startup_receipts'], 'restart did not execute the startup marker control'
+    assert (WORK / 'startup-receipt').read_text().count('emitted\n') >= before['startup_receipts'] + 2, 'both restart attempts must execute the startup marker control'
     assert (ROOT / 'log/jos81-restored').read_bytes() == RESTORE, 'backup-only sentinel was not restored'
+    assert (ROOT / 'backup/log/jos81-unsafe-restore').read_bytes() == b'JOS81_MUST_NOT_RESTORE'
+    assert not (ROOT / 'log/jos81-unsafe-restore').exists(), 'interrupted-start guard restored backup logs'
     for path in (ROOT / 'log/jos81-shutdown', ROOT / 'backup/log/jos81-shutdown'):
         assert path.read_bytes() == SHUTDOWN
     assert (ROOT / 'files/jos81-preserve-sentinel').read_text() == 'JOS81_PRESERVE_files'

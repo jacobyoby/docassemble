@@ -42,6 +42,11 @@ The native image rehearsal now covers:
   shutdown-only backup sentinel, valid final initializer counters and
   same-volume restart. The host inserts a backup-only file while stopped;
   its later appearance in live logs proves the actual restore path ran.
+- A one-shot startup hold in that same synthetic module, before the real
+  initializer installs its shutdown trap. Supervisor interrupts the captured
+  initializer, and its unfinished-start marker must survive. A new backup-only
+  file must remain absent from live logs on the next startup, proving the
+  existing unsafe-restore guard still applies.
 - Preserved configuration, upload and database session state, working
   queue/cron after restart, stopped-service reconciliation and rollback.
 
@@ -57,6 +62,6 @@ Scans cover current, rotated, copied and local/rolling backup diagnostic
 destinations; application documents and database dumps are not treated as logs.
 Target checks establish local backups and disable S3/Azure. Conditional cloud,
 Apache and explicit log-role paths, arbitrary third-party handlers and manual
-bypasses are not proven by this fixture. Interrupted-start/unsafe-restore
-behavior and final target-specific release checks remain open. Mail stays
+bypasses are not proven by this fixture. Native CI for the added lifecycle
+controls and final target-specific release checks remain open. Mail stays
 deferred and its rotation stanza is excluded.

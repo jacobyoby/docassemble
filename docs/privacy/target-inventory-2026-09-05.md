@@ -135,3 +135,12 @@ run-parts schedules and the colon-delimited all-role setting used by the rotatio
 callback. The probe emitted only hashes, permissions and schedule booleans,
 not crontab contents. Evidence is in
 `tests/.privacy-build/maintenance-review/target-maintenance-paths.txt`.
+
+The final read-only syslog include check finds the same active hash on both
+targets, only the standard `scl.conf` and `/etc/syslog-ng/conf.d/*.conf`
+includes, and zero matching local include files. The uncommented main file
+contains system/internal sources, no network source and no application-log
+path. Preserve that existing system logging configuration and each target's
+service state; no custom application forwarding include needs migration.
+This is configuration evidence, not a scan of historical system-log contents.
+Evidence: `tests/.privacy-build/maintenance-review/target-syslog-includes.json`.

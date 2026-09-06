@@ -80,7 +80,7 @@ it differs from the source hash. Unsafe retained configuration still blocks
 installation; this policy is not permission to bypass preflight.
 
 For `existing: apply-privacy-diff`, apply only this candidate's privacy changes
-to the snapshotted target initializer. Preserve unrelated target lines. Record
+to the snapshotted target initializer and daily cron script. Preserve unrelated target lines. Record
 the actual resulting hash and inspect the diff before installation; a source
 hash alone cannot verify that result. Other entries require reviewed replacement
 and the listed ownership/mode. These are review instructions for the existing
