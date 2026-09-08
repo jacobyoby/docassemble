@@ -1,5 +1,6 @@
-from geopy.geocoders import GoogleV3
-from geopy.geocoders import AzureMaps
+# geopy is imported lazily inside initialize() so a broken geopy
+# dependency chain (e.g. yarl -> pydantic SystemError, issue 932)
+# cannot kill server startup at module import time.
 from docassemble.base.logger import logmessage
 from docassemble.base.config import daconfig
 
@@ -22,6 +23,7 @@ class GoogleV3GeoCoder(GeoCoder):
         return True
 
     def initialize(self):
+        from geopy.geocoders import GoogleV3  # pylint: disable=import-outside-toplevel
         self.geocoder = GoogleV3(api_key=daconfig['google']['api key'])
 
     def populate_address(self, address):
@@ -150,6 +152,7 @@ class AzureMapsGeoCoder(GeoCoder):
         return True
 
     def initialize(self):
+        from geopy.geocoders import AzureMaps  # pylint: disable=import-outside-toplevel
         self.geocoder = AzureMaps(daconfig['azure maps']['primary key'])
 
     def populate_address(self, address):
