@@ -3,9 +3,6 @@
 Branch `jacob/maintained` is the working branch. It tracks
 `jhpyle/docassemble` master and carries, beyond upstream:
 
-- **Bool config crash fix** (upstream #980, PR #983 pending): `str()` guard
-  in `docassemble_base/docassemble/base/parse.py` so a YAML boolean in
-  `main page title url opens in other window` cannot break every interview.
 - **Plain-dict conversion** (upstream #981; upstream declined in PR #984 —
   object notation is the documented mechanism): `POST /api/session` converts
   a non-empty all-bool plain dict to a gathered `DADict`.
@@ -45,6 +42,24 @@ Branch `jacob/maintained` is the working branch. It tracks
   fallback. Implementation in `docassemble/base/email_crypto.py`.
 - **Clearer API error**: when a plain dict still breaks assembly, the error
   names the variable and links `session_post_objects`.
+- **Accessibility** (#18): skip-to-content link in base.html and the
+  interview page emitter, 404 page gains `<main role="main">` landmark
+  and a home link, `@media print` rules drop the navbar, buttons, and
+  footer. Skip link uses upstream's `tabindex="0"`; print CSS is
+  fork-only.
+- **SEO** (#15): `<meta name="description">` from interview metadata
+  (falling back to site-wide social description), `<link rel="canonical">`
+  to the clean entry URL, OG tags whenever `config['SOCIAL']['og']` is
+  defined (not only when `og:image` is set), `/sitemap.xml` listing
+  public dispatch interviews.
+- **FontAwesome CSS** (#19): replaces the 1.6 MB JS SVG-replacement
+  bundle with 88 KB CSS + icon fonts fetched on demand; class names and
+  icon rendering are unchanged.
+- **PDF NFC normalisation** (#21): `pdftk.py` normalises fill values to
+  NFC before the XFDF write so accented names on court filings render
+  correctly.
+- **Geocode lazy-load** (issue 932): `geopy` is imported on first use so
+  a broken pydantic chain cannot kill startup.
 
 ## Test harness (`.github/workflows/`)
 
@@ -77,7 +92,7 @@ CodeQL runs via advanced setup (`.github/workflows/codeql.yml` +
 `.github/codeql/codeql-config.yml`), not GitHub's default setup, so it
 can take path rules. The config runs `security-extended` on first-party
 source and excludes generated JS bundles (duplicates of the scanned
-`app/*.js` sources) and vendored libraries (labelauty, tom-select,
+`app/*.js` sources) and vendored libraries (tom-select,
 bootstrap, jQuery, fontawesome, codemirror) which are upstream's to fix.
 Scans run on push/PR to master and jacob/maintained and weekly.
 
