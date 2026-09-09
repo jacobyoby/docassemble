@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # Fail-first SEO check for fork issue #15.
 #
-# Usage: seo_check.sh <base_url> expect-fail|expect-pass
+# Usage: seo_check.sh <base_url> expect-fail|expect-pass [url_root]
 #
 # Requires the test interview test_seo.yml installed in docassemble.demo and
 # the server config to carry:
 #   dispatch: {seo: docassemble.demo:data/questions/test_seo.yml}
 #   social: {og: {locale: en_US}}      # og configured WITHOUT an image
+#   url root: <url_root>               # must differ from base_url for meaningful check
 #
 # Assertions against the live interview page and sitemap:
 #   1. <meta name="description"> carries the interview's metadata description,
@@ -15,11 +16,12 @@
 #   2. <link rel="canonical"> points at the clean interview entry URL.
 #   3. og:title is emitted even though no og:image is configured (ungated).
 #   4. /sitemap.xml lists the dispatch entry.
+#   5. Every <loc> in sitemap.xml starts with url_root (when url_root is given).
 #
 # expect-fail: every assertion must FAIL on the unpatched release. expect-pass:
 # every assertion must hold.
 set -euo pipefail
-base="$1"; mode="$2"
+base="$1"; mode="$2"; url_root="${3:-}"
 yaml="docassemble.demo:data/questions/test_seo.yml"
 page=$(curl -sL "$base/interview?i=$yaml")
 
@@ -27,7 +29,8 @@ desc=$(echo "$page" | grep -c 'name="description" content="A test interview whos
 desc_total=$(echo "$page" | grep -c 'name="description"' || true)
 canon=$(echo "$page" | grep -c 'rel="canonical" href="' || true)
 og=$(echo "$page" | grep -c 'name="og:title"' || true)
-sitemap=$(curl -s "$base/sitemap.xml" | grep -cE '<loc>.*/start/seo/?</loc>' || true)
+sitemap_body=$(curl -s "$base/sitemap.xml")
+sitemap=$(echo "$sitemap_body" | grep -cE '<loc>.*/start/seo/?</loc>' || true)
 
 echo "description=$desc (total description tags=$desc_total) canonical=$canon og:title=$og sitemap=$sitemap"
 
@@ -42,6 +45,16 @@ case "$mode" in
     if [ "$desc" -lt 1 ] || [ "$desc_total" != "1" ] || [ "$canon" -lt 1 ] || [ "$og" -lt 1 ] || [ "$sitemap" -lt 1 ]; then
       echo "FAIL: SEO fix not fully present"
       exit 1
+    fi
+    # When url_root is provided, verify every <loc> entry starts with it
+    if [ -n "$url_root" ]; then
+      loc_count=$(echo "$sitemap_body" | grep -cE '<loc>' || true)
+      loc_with_root=$(echo "$sitemap_body" | grep -cE "<loc>${url_root}/" || true)
+      if [ "$loc_count" != "$loc_with_root" ] || [ "$loc_count" = "0" ]; then
+        echo "FAIL: sitemap <loc> entries do not all start with url root '$url_root' ($loc_with_root of $loc_count)"
+        exit 1
+      fi
+      echo "pass: all $loc_count sitemap <loc> entries start with $url_root"
     fi
     echo "pass: description, canonical, ungated og:title, and sitemap entry all present" ;;
   *) echo "mode must be expect-fail or expect-pass"; exit 2 ;;
