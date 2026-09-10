@@ -1014,13 +1014,13 @@ def logout():
 
 def unauthenticated():
     if not request.args.get('nm', False):
-        flash(word("You need to log in before you can access") + " " + word(request.path), 'error')
+        flash(Markup("{} {}").format(word("You need to log in before you can access"), word(request.path)), 'error')
     the_url = url_for('user.login', next=fix_http(request.url))
     return redirect(the_url)
 
 
 def unauthorized():
-    flash(word("You are not authorized to access") + " " + word(request.path), 'error')
+    flash(Markup("{} {}").format(word("You are not authorized to access"), word(request.path)), 'error')
     return redirect(url_for('admin.interview_list', next=fix_http(request.url)))
 
 
@@ -1121,7 +1121,12 @@ def auto_login():
 
 @users_bp.route('/headers', methods=['POST', 'GET'])
 @csrf.exempt
+@login_required
 def show_headers():
+    # NB: debug endpoint. Authentication required (M-9): unauthenticated
+    # callers must not be able to enumerate request headers (Cookie,
+    # Authorization) or server addressing. login_required sits innermost so
+    # the csrf exemption above keeps applying to the wrapped view.
     return jsonify(headers=dict(request.headers), ipaddress=request.remote_addr)
 
 @users_bp.route('/mfa_setup', methods=['POST', 'GET'])

@@ -46,7 +46,7 @@ from flask import (
 from flask_login import current_user
 from flask_wtf.csrf import generate_csrf
 from user_agents import parse as ua_parse
-from markupsafe import Markup
+from markupsafe import Markup, escape
 import packaging
 from sqlalchemy import or_, and_, select, update, inspect, create_engine
 from werkzeug.datastructures import Headers
@@ -1493,14 +1493,17 @@ def uninstall_package(packagename):
 
 def summarize_results(results, logmessages, html=True):
     if html:
-        output = '<br>'.join([x + ':&nbsp;' + results[x] for x in sorted(results.keys())])
+        # NB: results values and logmessages carry pip subprocess output that
+        # reflects remote package metadata, so every dynamic part is escaped
+        # and only the structural tags stay literal Markup.
+        output = Markup('<br>').join([escape(key) + Markup(':&nbsp;') + escape(results[key]) for key in sorted(results.keys())])
         if len(logmessages) > 0:
             if len(output) > 0:
-                output += '<br><br><strong>' + word("pip log") + ':</strong><br>'
+                output += Markup('<br><br><strong>') + escape(word("pip log")) + Markup(':</strong><br>')
             else:
-                output = ''
-            output += re.sub(r'\n', r'<br>', logmessages)
-        return Markup(output)
+                output = Markup('')
+            output += Markup('<br>').join(escape(line) for line in logmessages.split('\n'))
+        return output
     output = '\n'.join([x + ': ' + results[x] for x in sorted(results.keys())])
     if len(logmessages) > 0:
         if len(output) > 0:

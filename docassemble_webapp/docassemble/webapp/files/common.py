@@ -12,7 +12,11 @@ def can_access_file_number(file_number, uids=None):
     upload = db.session.execute(select(Uploads).where(Uploads.indexno == file_number)).scalar()
     if upload is None:
         return False
-    if current_user and current_user.is_authenticated and current_user.has_role('admin', 'developer', 'advocate', 'trainer'):
+    # NB: least privilege (M-11). Only admins and developers bypass per-file
+    # checks here. Advocates and trainers fall through to the granular grants
+    # below (own session keys, UploadsUserAuth, UploadsRoleAuth), so they can
+    # still reach exactly the files shared with them and nothing else.
+    if current_user and current_user.is_authenticated and current_user.has_role('admin', 'developer'):
         return True
     if not upload.private:
         return True
