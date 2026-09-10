@@ -23,21 +23,25 @@ else:
 
 @app.route('/listlog')
 def list_log_files():
-    cmd = "supervisorctl "
+    # Argument lists throughout: environment values travel as single
+    # argv elements and are never interpreted by a shell.
+    auth_args = []
     if os.getenv('DASUPERVISORUSERNAME', None):
-        cmd += '--username ' + os.getenv('DASUPERVISORUSERNAME') + ' --password ' + os.getenv('DASUPERVISORPASSWORD') + ' '
-    cmd += "--serverurl http://localhost:9001 start sync > /dev/null && while supervisorctl "
-    if os.getenv('DASUPERVISORUSERNAME', None):
-        cmd += '--username ' + os.getenv('DASUPERVISORUSERNAME') + ' --password ' + os.getenv('DASUPERVISORPASSWORD') + ' '
-    cmd += "--serverurl http://localhost:9001 status sync | grep -q RUNNING; do sleep 1; done"
-    result = subprocess.run(cmd, shell=True, check=False).returncode
-    if result == 0:
+        auth_args = ['--username', os.getenv('DASUPERVISORUSERNAME'), '--password', os.getenv('DASUPERVISORPASSWORD')]
+    server_args = ['--serverurl', 'http://localhost:9001']
+    result = subprocess.run(['supervisorctl'] + auth_args + server_args + ['start', 'sync'], stdout=subprocess.DEVNULL, check=False).returncode
+    if result != 0:
+        return "There was an error."
+    while True:
+        status = subprocess.run(['supervisorctl'] + auth_args + server_args + ['status', 'sync'], stdout=subprocess.PIPE, check=False)
+        if status.returncode == 0 and b'RUNNING' in status.stdout:
+            break
+        time.sleep(1)
+    file_listing = [f for f in os.listdir(LOG_DIRECTORY) if os.path.isfile(os.path.join(LOG_DIRECTORY, f))]
+    if len(file_listing) == 0:
+        time.sleep(2)
         file_listing = [f for f in os.listdir(LOG_DIRECTORY) if os.path.isfile(os.path.join(LOG_DIRECTORY, f))]
-        if len(file_listing) == 0:
-            time.sleep(2)
-            file_listing = [f for f in os.listdir(LOG_DIRECTORY) if os.path.isfile(os.path.join(LOG_DIRECTORY, f))]
-        return "\n".join(sorted(file_listing))
-    return "There was an error."
+    return "\n".join(sorted(file_listing))
 
 
 @app.route("/listlog/health_check", methods=['GET'])
