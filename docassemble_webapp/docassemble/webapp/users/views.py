@@ -33,7 +33,7 @@ from flask_wtf.csrf import generate_csrf
 from flask_login import logout_user, login_user
 from sqlalchemy import and_, not_, select
 from sqlalchemy.orm import joinedload
-from markupsafe import Markup
+from markupsafe import Markup, escape
 from docassemble_flask_user import current_user, login_required, roles_required, emails
 import docassemble_flask_user
 from docassemble.base.functions import (
@@ -863,7 +863,7 @@ def custom_login():
                and user.has_role(*daconfig['email confirmation privileges']) \
                and not user.has_confirmed_email():
                 url = url_for('user.resend_confirm_email', email=user.email)
-                flash(word('You cannot log in until your e-mail address has been confirmed.') + '<br><a href="' + url + '">' + word('Click here to confirm your e-mail') + '</a>.', 'error')
+                flash(Markup(word('You cannot log in until your e-mail address has been confirmed.') + '<br><a href="' + str(escape(url)) + '">' + word('Click here to confirm your e-mail') + '</a>.'), 'error')
                 return redirect(url_for('user.login'))
             return add_secret_to(docassemble_flask_user.views._do_login_user(user, safe_next, login_form.remember_me.data))
     if is_json:

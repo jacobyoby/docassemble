@@ -1644,7 +1644,7 @@ def name_of_user(user, include_email=False):
 def flash_as_html(message, message_type="info", is_ajax=True):
     if message_type == 'error':
         message_type = 'danger'
-    output = "\n        " + (NOTIFICATION_MESSAGE % (message_type, str(message))) + "\n"
+    output = "\n        " + (NOTIFICATION_MESSAGE % (message_type, escape(str(message)) if not isinstance(message, Markup) else message)) + "\n"
     if not is_ajax:
         flash(message, message_type)
     return output

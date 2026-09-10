@@ -20,7 +20,7 @@ from flask import (
     abort,
 )
 from flask_login import logout_user, current_user
-from markupsafe import Markup
+from markupsafe import Markup, escape
 from bs4 import BeautifulSoup
 from PIL import Image
 from flask_wtf.csrf import generate_csrf
@@ -2486,7 +2486,7 @@ def index(action_argument=None, refer=None):
         for classname, message in messages:
             if classname == 'error':
                 classname = 'danger'
-            notification_interior += NOTIFICATION_MESSAGE % (classname, str(message))
+            notification_interior += NOTIFICATION_MESSAGE % (classname, escape(str(message)) if not isinstance(message, Markup) else message)
         flash_content = NOTIFICATION_CONTAINER % (notification_interior,)
     else:
         flash_content = NOTIFICATION_CONTAINER % ('',)
