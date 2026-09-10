@@ -3,7 +3,7 @@
 from contextlib import contextmanager
 import datetime
 import json
-import random
+import secrets
 from typing import Any
 import re
 import sys
@@ -24,7 +24,7 @@ from docassemble.base.functions import server_context
 from docassemble.base.language.words import word
 from docassemble.base.logger import logmessage
 from docassemble.base.thread_context import this_thread
-from docassemble.webapp.config import daconfig
+from docassemble.webapp.config import daconfig, require_secret_key
 from docassemble.webapp.daredis import r as rr, redis_host, redis_port, redis_offset, r_store
 from docassemble.webapp.database import alchemy_connection_string, connect_args
 from docassemble.webapp.interview.user_dict import fetch_user_dict
@@ -38,8 +38,14 @@ from docassemble.webapp.utils.helpers import decode_dict, nice_utc_date, get_ses
 
 if 'cross site domains' in daconfig and isinstance(daconfig['cross site domains'], list) and len(daconfig['cross site domains']) > 0:
     origins = daconfig['cross site domains']
+elif daconfig.get('url root'):
+    origins = [daconfig['url root']]
 else:
-    origins = [daconfig.get('url root', '*')]
+    # NB: no allowlist and no url root. Pass None so engine.io enforces
+    # same-origin from the request Host headers instead of a wildcard.
+    # (An empty list would skip origin validation entirely, and a star
+    # entry would allow all origins.)
+    origins = None
 
 alchemy_connect_string = alchemy_connection_string()
 if alchemy_connect_string.startswith('postgresql'):
@@ -53,8 +59,14 @@ socketio = SocketIO()
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.secret_key = daconfig.get('secretkey', '38ihfiFehfoU34mcq_4clirglw3g4o87')
-socketio.init_app(app, async_mode='gevent', verify=False, logger=True, engineio_logger=True, cors_allowed_origins=origins)
+app.secret_key = require_secret_key()
+# NB: no `verify` kwarg here. python-socketio's server accepts **kwargs and
+# silently ignores unknown ones, so a `verify=False` flag would disable
+# nothing while suggesting certificate verification is off. This process is
+# purely a server: it never makes outbound TLS connections, so there is no
+# client-side certificate check to enable. Browsers connecting to it verify
+# the server certificate themselves, and TLS terminates at the WSGI layer.
+socketio.init_app(app, async_mode='gevent', logger=True, engineio_logger=True, cors_allowed_origins=origins)
 server_context.set_context('websockets')
 KVSessionExtension().init_app(app, session_kvstore=RedisStore(r_store))
 
@@ -667,7 +679,7 @@ def update_monitor(message):
             times = 0
             while times < 1000:
                 times += 1
-                code = f"{random.randint(1000, 9999):04d}"
+                code = f"{secrets.randbelow(9000) + 1000:04d}"
                 if code in codes_in_use:
                     continue
                 the_code = code

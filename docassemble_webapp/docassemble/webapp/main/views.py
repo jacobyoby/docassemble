@@ -173,7 +173,6 @@ def change_color_scheme():
 
 
 @main_bp.route("/resume", methods=['POST'])
-@csrf.exempt
 def resume():
     post_data = request.get_json(silent=True)
     if post_data is None:

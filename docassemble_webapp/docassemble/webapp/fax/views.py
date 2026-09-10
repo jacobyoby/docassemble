@@ -1,5 +1,6 @@
 import json
-from flask import request, Blueprint
+from flask import request, Blueprint, Response
+from twilio.request_validator import RequestValidator
 from docassemble.webapp.daredis import r
 from docassemble.webapp.extensions import csrf
 from docassemble.webapp.twilio.helpers import twilio_config
@@ -27,6 +28,12 @@ def fax_callback():
             tconfig = config_info
     if tconfig is None:
         logmessage("fax_callback: account sid of fax callback did not match any account sid in the Twilio configuration")
+        return ('', 204)
+    signature = request.headers.get('X-Twilio-Signature', '')
+    auth_token = tconfig.get('auth token')
+    if auth_token is None or not RequestValidator(auth_token).validate(request.url, post_data, signature):
+        logmessage("fax_callback: invalid Twilio signature")
+        return Response('', status=403)
     if 'fax' not in tconfig or tconfig['fax'] in (False, None):
         logmessage("fax_callback: fax feature not enabled")
         return ('', 204)

@@ -1,28 +1,85 @@
 import datetime
+import io
 import pickle
 from docassemble.webapp.utils.logger import logmessage
 from docassemble.webapp.utils.constants import TypeType, NoneType
 from docassemble.webapp.hooks.impl import hookimpl
 
+# Defense in depth for #32: every GLOBAL resolved while unpickling stored
+# session/database data passes through this denylist. It blocks the classic
+# remote-code-execution primitives; it is NOT a substitute for the planned
+# migration to JSON with HMAC integrity verification, which must still happen.
+# Note: copyreg stays allowed because protocol-2 pickles of ordinary classes
+# need it, so exotic bypass chains remain possible. Treat this as a speed
+# bump for naive payloads, not a sandbox.
+_BLOCKED_UNPICKLE_MODULE_ROOTS = frozenset({
+    'os', 'posix', 'nt', 'subprocess', 'sys', 'socket', 'shutil',
+    'runpy', 'importlib', 'ctypes', 'code', 'pty', 'tty', 'webbrowser',
+    'ensurepip', 'venv', 'pydoc',
+})
+_BLOCKED_UNPICKLE_NAMES = frozenset({
+    'builtins:eval', 'builtins:exec', 'builtins:__import__',
+    'builtins:compile', 'builtins:open', 'builtins:input',
+    'builtins:exit', 'builtins:quit', 'builtins:globals',
+    'builtins:locals', 'builtins:vars', 'builtins:getattr',
+    'builtins:setattr', 'builtins:delattr', 'builtins:__build_class__',
+})
+
+
+# Python-2-era module names still show up in stored pickles (and in
+# attacker payloads using fix_imports-era aliases). Normalize before checking.
+_PY2_MODULE_ALIASES = {
+    '__builtin__': 'builtins',
+    'copy_reg': 'copyreg',
+}
+
+
+def _is_blocked_global(module, name):
+    module = _PY2_MODULE_ALIASES.get(module, module)
+    root = module.split('.')[0]
+    return root in _BLOCKED_UNPICKLE_MODULE_ROOTS or module + ':' + name in _BLOCKED_UNPICKLE_NAMES
+
+
+class RestrictedUnpickler(pickle.Unpickler):
+    def find_class(self, module, name):
+        if _is_blocked_global(module, name):
+            logmessage("fixpickle: refusing to unpickle blocked global " + module + "." + name)
+            raise pickle.UnpicklingError("forbidden GLOBAL " + module + "." + name)
+        resolved = super().find_class(module, name)
+        # GLOBALs can name an object through an aliased module (observed:
+        # subprocess.Popen pickled as commands.Popen), so re-check the
+        # resolved object's true home. Resolving only imports the module;
+        # nothing is called.
+        true_module = getattr(resolved, '__module__', None) or ''
+        true_name = getattr(resolved, '__name__', name)
+        if _is_blocked_global(true_module, true_name):
+            logmessage("fixpickle: refusing to unpickle blocked global " + module + "." + name + " (resolves to " + true_module + "." + str(true_name) + ")")
+            raise pickle.UnpicklingError("forbidden GLOBAL " + module + "." + name)
+        return resolved
+
+
+def restricted_loads(data, **kwargs):
+    return RestrictedUnpickler(io.BytesIO(data), **kwargs).load()
+
 
 @hookimpl
 def fix_pickle_obj(data):
     try:
-        return recursive_fix_pickle(pickle.loads(data, encoding="bytes", fix_imports=True), seen=set())
+        return recursive_fix_pickle(restricted_loads(data, encoding="bytes", fix_imports=True), seen=set())
     except:
-        return recursive_fix_pickle(pickle.loads(data, encoding="latin1", fix_imports=True), seen=set())
+        return recursive_fix_pickle(restricted_loads(data, encoding="latin1", fix_imports=True), seen=set())
 
 
 def fix_pickle_dict(the_dict):
     try:
-        obj = pickle.loads(the_dict)
+        obj = restricted_loads(the_dict)
         assert '_internal' in obj
         return obj
     except:
         try:
-            obj = pickle.loads(the_dict, encoding="bytes", fix_imports=True)
+            obj = restricted_loads(the_dict, encoding="bytes", fix_imports=True)
         except:
-            obj = pickle.loads(the_dict, encoding="latin1", fix_imports=True)
+            obj = restricted_loads(the_dict, encoding="latin1", fix_imports=True)
         return recursive_fix_pickle(obj, seen=set())
 
 

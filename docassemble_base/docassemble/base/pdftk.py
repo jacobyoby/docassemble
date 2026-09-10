@@ -286,6 +286,7 @@ def fill_template(template, data_strings=None, data_names=None, hidden=None, rea
             pdf = Pdf.open(template, password=template_password)
         else:
             pdf = Pdf.open(template)
+        choice_appearance_projections = {}
         for page in pdf.pages:
             if not hasattr(page, 'Annots'):
                 continue
@@ -341,17 +342,68 @@ def fill_template(template, data_strings=None, data_names=None, hidden=None, rea
                                 annot.AS = pikepdf.Name("/Off")
                                 annot.V = pikepdf.Name("/Off")
                     elif field_type == "/Ch":
-                        opt_list = [str(item) for item in annot.Opt]
-                        if value not in opt_list:
-                            opt_list.append(value)
-                            annot.Opt = pikepdf.Array(opt_list)
+                        if not hasattr(annot, "Opt"):
+                            annot.Opt = pikepdf.Array()
+                        # Paired options store an export value followed by the visible label.
+                        selected_option_index = None
+                        for option_index, option in enumerate(annot.Opt):
+                            if isinstance(option, pikepdf.Array):
+                                if len(option) == 0:
+                                    continue
+                                option_value = str(option[0])
+                            else:
+                                option_value = str(option)
+                            if value == option_value:
+                                selected_option_index = option_index
+                                break
+                        if selected_option_index is None:
+                            annot.Opt.append(pikepdf.String(value))
+                            selected_option_index = len(annot.Opt) - 1
                         the_string = pikepdf.String(value)
                         annot.V = the_string
+                        if hasattr(annot, "I"):
+                            annot.I = pikepdf.Array([selected_option_index])
+                        if any(isinstance(option, pikepdf.Array) for option in annot.Opt):
+                            display_options = pikepdf.Array()
+                            for option in annot.Opt:
+                                if isinstance(option, pikepdf.Array):
+                                    if len(option) > 1:
+                                        display_value = str(option[1])
+                                    elif len(option) == 1:
+                                        display_value = str(option[0])
+                                    else:
+                                        display_value = ''
+                                else:
+                                    display_value = str(option)
+                                display_options.append(pikepdf.String(display_value))
+                            appearance_key = annot.objgen
+                            if appearance_key == (0, 0):
+                                # Retaining the direct object prevents its id from being reused.
+                                appearance_key = id(annot)
+                            choice_appearance_projections[appearance_key] = (
+                                annot,
+                                annot.Opt,
+                                annot.V,
+                                display_options,
+                                display_options[selected_option_index],
+                            )
         pdf.Root.AcroForm.NeedAppearances = True
         try:
+            # QPDF renders a paired option's export code, so use display labels only
+            # while it builds appearances and keep the canonical field data for saving.
+            for projection in choice_appearance_projections.values():
+                annot, _original_options, _original_value, display_options, display_value = projection
+                annot.Opt = display_options
+                annot.V = display_value
             pdf.generate_appearance_streams()
         except Exception as err:
             logmessage("fill_template: could not generate appearance streams: " + str(err))
+        finally:
+            # Preserve paired options and their export values even if generation fails.
+            for projection in choice_appearance_projections.values():
+                annot, original_options, original_value, _display_options, _display_value = projection
+                annot.Opt = original_options
+                annot.V = original_value
         pdf.Root.AcroForm.NeedAppearances = True
         # if not editable:
         #     try:
