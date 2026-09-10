@@ -1014,13 +1014,13 @@ def logout():
 
 def unauthenticated():
     if not request.args.get('nm', False):
-        flash(word("You need to log in before you can access") + " " + word(request.path), 'error')
+        flash(Markup("{} {}").format(word("You need to log in before you can access"), word(request.path)), 'error')
     the_url = url_for('user.login', next=fix_http(request.url))
     return redirect(the_url)
 
 
 def unauthorized():
-    flash(word("You are not authorized to access") + " " + word(request.path), 'error')
+    flash(Markup("{} {}").format(word("You are not authorized to access"), word(request.path)), 'error')
     return redirect(url_for('admin.interview_list', next=fix_http(request.url)))
 
 
