@@ -297,6 +297,16 @@ jobs:
           PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
           docker exec da "$PY" /tmp/cors_check.py /tmp/api_cors.py /tmp/views_cors.py /tmp/socketserver_cors.py
 
+      - name: Debug flags - no hardcoded DEBUG=True or debugger (#53)
+        run: |
+          P=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/base/parse.py")
+          docker cp docassemble_base/docassemble/base/parse.py da:"$P"
+          docker cp docassemble_webapp/docassemble/webapp/testrun.py /tmp/testrun_debug.py
+          docker cp /tmp/testrun_debug.py da:/tmp/testrun_debug.py
+          docker cp .github/workflows/e2e/debug_check.py da:/tmp/debug_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/debug_check.py "$P" /tmp/testrun_debug.py
+
       - name: Issue-968 - patched server must report the real attribute
         run: bash .github/workflows/e2e/issue_968_repro.sh http://localhost:8080 da expect-pass
 
