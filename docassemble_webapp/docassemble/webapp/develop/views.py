@@ -41,7 +41,7 @@ from flask import (
 from flask_cors import cross_origin
 from flask_login import current_user
 from flask_wtf.csrf import generate_csrf
-from markupsafe import Markup
+from markupsafe import Markup, escape
 from pygments import highlight
 from pygments.formatters.html import HtmlFormatter
 from pygments.lexers import YamlLexer  # pylint: disable=no-name-in-module
@@ -2624,9 +2624,9 @@ def playground_packages():
                 github_ssh = repo_info['ssh_url']
                 if repo_info['private']:
                     github_use_ssh = True
-                github_message = word('This package is') + ' <a target="_blank" href="' + repo_info.get('html_url', 'about:blank') + '">' + word("published on GitHub") + '</a>.'
+                github_message = Markup("{} {}.").format(word('This package is'), _github_link(repo_info.get('html_url', 'about:blank'), word("published on GitHub")))
                 if github_author_name:
-                    github_message += "  " + word("The author is") + " " + github_author_name + "."
+                    github_message = Markup("{}  {} {}.").format(Markup(github_message), word("The author is"), github_author_name)
                 branch_info = get_branch_info(http, repo_info['full_name'])
                 found = True
                 if github_url_from_file is None or github_url_from_file in [github_ssh, github_http]:
@@ -2642,7 +2642,7 @@ def playground_packages():
                     github_ssh = repo_info['ssh_url']
                     if repo_info['private']:
                         github_use_ssh = True
-                    github_message = word('This package is') + ' <a target="_blank" href="' + repo_info.get('html_url', 'about:blank') + '">' + word("published on GitHub") + '</a>.'
+                    github_message = Markup("{} {}.").format(word('This package is'), _github_link(repo_info.get('html_url', 'about:blank'), word("published on GitHub")))
                     branch_info = get_branch_info(http, repo_info['full_name'])
                     found = True
                     if github_url_from_file is None or github_url_from_file in [github_ssh, github_http]:
@@ -2660,7 +2660,7 @@ def playground_packages():
                         github_ssh = repo_info['ssh_url']
                         if repo_info['private']:
                             github_use_ssh = True
-                        github_message = word('This package is') + ' <a target="_blank" href="' + repo_info.get('html_url', 'about:blank') + '">' + word("published on GitHub") + '</a>.'
+                        github_message = Markup("{} {}.").format(word('This package is'), _github_link(repo_info.get('html_url', 'about:blank'), word("published on GitHub")))
                         branch_info = get_branch_info(http, repo_info['full_name'])
                         found = True
                         if github_url_from_file is None or github_url_from_file in [github_ssh, github_http]:
@@ -2969,7 +2969,7 @@ def playground_packages():
     else:
         the_pypi_package_name = None
     if github_message is not None and github_url_from_file is not None and github_url_from_file != github_http and github_url_from_file != github_ssh:
-        github_message += '  ' + word("This package was originally pulled from") + ' <a target="_blank" href="' + github_as_http(github_url_from_file) + '">' + word('a GitHub repository') + '</a>.'
+        github_message = Markup("{}  {} {}.").format(Markup(github_message), word("This package was originally pulled from"), _github_link(github_as_http(github_url_from_file), word('a GitHub repository')))
     if github_message is not None and old_info.get('github_branch', None) and (github_http or github_url_from_file):
         html_url = github_http or github_url_from_file
         commit_code = None
@@ -2985,9 +2985,14 @@ def playground_packages():
         else:
             commit_code_date = ''
         if commit_code:
-            github_message += '  ' + word('The current branch is %s and the current commit is %s.') % ('<a target="_blank" href="' + html_url + '/tree/' + old_info['github_branch'] + '">' + old_info['github_branch'] + '</a>', '<a target="_blank" href="' + html_url + '/commit/' + commit_code + '"><code>' + commit_code[0:7] + '</code></a>') + '  ' + word('The commit was saved locally at %s.') % commit_code_date
+            branch_link = Markup('<a target="_blank" href="') + escape(html_url) + Markup('/tree/') + escape(old_info['github_branch']) + Markup('">') + escape(old_info['github_branch']) + Markup('</a>')
+            commit_link = Markup('<a target="_blank" href="') + escape(html_url) + Markup('/commit/') + escape(commit_code) + Markup('"><code>') + escape(commit_code[0:7]) + Markup('</code></a>')
+            addition = Markup('  ' + word('The current branch is %s and the current commit is %s.') % (branch_link, commit_link) + '  ' + word('The commit was saved locally at %s.') % commit_code_date)
+            github_message = Markup("{}{}").format(Markup(github_message), addition)
         else:
-            github_message += '  ' + word('The current branch is %s.') % ('<a target="_blank" href="' + html_url + '/tree/' + old_info['github_branch'] + '">' + old_info['github_branch'] + '</a>',)
+            branch_link = Markup('<a target="_blank" href="') + escape(html_url) + Markup('/tree/') + escape(old_info['github_branch']) + Markup('">') + escape(old_info['github_branch']) + Markup('</a>')
+            addition = Markup('  ' + word('The current branch is %s.') % (branch_link,))
+            github_message = Markup("{}{}").format(Markup(github_message), addition)
     if github_message is not None:
         github_message = Markup(github_message)
     branch = old_info.get('github_branch', None)
@@ -3023,6 +3028,11 @@ def playground_packages():
     response = make_response(render_template('develop/playgroundpackages.html', current_project=current_project, branch=default_branch, version_warning=None, bodyclass='daadminbody', can_publish_to_pypi=can_publish_to_pypi, pypi_message=pypi_message, can_publish_to_github=can_publish_to_github, github_message=github_message, github_url=the_github_url, pypi_package_name=the_pypi_package_name, back_button=back_button, tab_title=header, page_title=header, extra_css=Markup('\n    <link href="' + url_for('static', filename='app/playgroundbundle.css', v=da_version) + '" rel="stylesheet">'), extra_js=Markup(extra_js), header=header, upload_header=upload_header, edit_header=edit_header, description=description, form=form, fileform=fileform, files=files, file_list=file_list, userid=playground_user.id, editable_files=sorted(editable_files, key=lambda y: y['name'].lower()), current_file=the_file, after_text=after_text, section_name=section_name, section_sec=section_sec, section_field=section_field, package_names=sorted(package_names, key=lambda y: y.lower()), any_files=any_files), 200)
     response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
     return response
+
+
+def _github_link(url, text):
+    """Anchor tag with URL and text escaped for Markup messages."""
+    return Markup('<a target="_blank" href="') + escape(url) + Markup('">') + escape(text) + Markup('</a>')
 
 
 def github_as_http(url):
