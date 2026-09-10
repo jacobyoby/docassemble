@@ -323,6 +323,14 @@ jobs:
           PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
           docker exec da "$PY" /tmp/headers_auth_check.py "$U"
 
+      - name: Phone codes - no verification code in URLs (#56)
+        run: |
+          P=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp/phonelogin/views.py")
+          docker cp docassemble_webapp/docassemble/webapp/phonelogin/views.py da:"$P"
+          docker cp .github/workflows/e2e/phonecode_check.py da:/tmp/phonecode_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/phonecode_check.py "$P"
+
       - name: Issue-968 - patched server must report the real attribute
         run: bash .github/workflows/e2e/issue_968_repro.sh http://localhost:8080 da expect-pass
 
