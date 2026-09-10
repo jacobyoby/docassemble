@@ -148,7 +148,7 @@ from docassemble.webapp.packages.helpers import pypi_status
 from docassemble.webapp.utils.filenames import sanitize_arguments, secure_filename
 from docassemble.webapp.utils.hooks import url_for
 from docassemble.webapp.utils.logger import logmessage
-from docassemble.webapp.utils.path import splitall
+from docassemble.webapp.utils.path import splitall, zip_member_is_safe
 from docassemble.webapp.utils.redis_cred_storage import RedisCredStorage
 from .blueprint import develop_bp
 from .common import project_name, get_playground_user
@@ -2686,6 +2686,10 @@ def playground_packages():
                 area_sec = {'templates': 'playgroundtemplate', 'static': 'playgroundstatic', 'sources': 'playgroundsources', 'questions': 'playground'}
                 zippath.close()
                 with zipfile.ZipFile(zippath.name, mode='r') as zf:
+                    for zinfo in zf.infolist():
+                        if not zip_member_is_safe(zinfo):
+                            flash(word("The zip file contained an unsafe file path."), 'error')
+                            return redirect(url_for('develop.playground_packages', project=current_project, file=the_file))
                     readme_text = ''
                     gitignore_text = ''
                     setup_py = ''

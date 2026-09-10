@@ -32,7 +32,7 @@ from docassemble.webapp.utils.helpers import (
     name_of_user,
 )
 from docassemble.webapp.utils.logger import logmessage
-from docassemble.webapp.utils.path import splitall
+from docassemble.webapp.utils.path import splitall, zip_member_is_safe
 from .common import project_name
 from .views import (
     delete_project,
@@ -161,6 +161,9 @@ def api_playground_install():
                 up_file.close()
                 zippath.close()
                 with zipfile.ZipFile(zippath.name, mode='r') as zf:
+                    for zinfo in zf.infolist():
+                        if not zip_member_is_safe(zinfo):
+                            return jsonify_with_status("ZIP file contains unsafe member paths.", 400)
                     readme_text = ''
                     gitignore_text = ''
                     setup_py = ''
