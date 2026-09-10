@@ -45,6 +45,11 @@ Branch `jacob/maintained` is the working branch. It tracks
   fallback. Implementation in `docassemble/base/email_crypto.py`.
 - **Clearer API error**: when a plain dict still breaks assembly, the error
   names the variable and links `session_post_objects`.
+- **PDF choice options**: editable fills preserve paired export/display
+  options and selection indices; a temporary display-label projection lets
+  QPDF render labels while the saved PDF retains its canonical export values.
+  The focused fail-first gate and bounded CN 11208 verification are described
+  in [the repair review](docs/pdf-choice-review.md).
 
 ## Test harness (`.github/workflows/`)
 
