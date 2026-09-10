@@ -29,7 +29,23 @@ from docassemble.base.config import (
     parse_redis_uri,
 )
 
-DEFAULT_SECRET_KEY = '38ihfiFehfoU34mcq_4clirglw3g4o87'
+KNOWN_DEFAULT_SECRET_KEYS = frozenset({
+    '38ihfiFehfoU34mcq_4clirglw3g4o87',
+    '28asflwjeifwlfjsd2fejfiefw3g4o87',
+})
+
+
+def require_secret_key():
+    secret_key = daconfig.get('secretkey', None)
+    if not secret_key or secret_key in KNOWN_DEFAULT_SECRET_KEYS:
+        raise RuntimeError(
+            'Refusing to start: the "secretkey" setting is missing or '
+            'still set to a publicly known default. Configure a unique '
+            '"secretkey" value (or set the DASECRETKEY environment variable).'
+        )
+    return secret_key
+
+
 HTTP_TO_HTTPS = daconfig.get('behind https load balancer', False)
 
 BAN_IP_ADDRESSES = daconfig.get('ip address ban enabled', True)

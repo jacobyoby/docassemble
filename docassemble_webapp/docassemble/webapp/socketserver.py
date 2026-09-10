@@ -24,7 +24,7 @@ from docassemble.base.functions import server_context
 from docassemble.base.language.words import word
 from docassemble.base.logger import logmessage
 from docassemble.base.thread_context import this_thread
-from docassemble.webapp.config import daconfig
+from docassemble.webapp.config import daconfig, require_secret_key
 from docassemble.webapp.daredis import r as rr, redis_host, redis_port, redis_offset, r_store
 from docassemble.webapp.database import alchemy_connection_string, connect_args
 from docassemble.webapp.interview.user_dict import fetch_user_dict
@@ -53,7 +53,7 @@ socketio = SocketIO()
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.secret_key = daconfig.get('secretkey', '38ihfiFehfoU34mcq_4clirglw3g4o87')
+app.secret_key = require_secret_key()
 socketio.init_app(app, async_mode='gevent', verify=False, logger=True, engineio_logger=True, cors_allowed_origins=origins)
 server_context.set_context('websockets')
 KVSessionExtension().init_app(app, session_kvstore=RedisStore(r_store))

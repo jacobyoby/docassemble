@@ -12,12 +12,12 @@ from docassemble.webapp.extensions import (
 
 def init_app(the_app):
     # get configuration
-    from docassemble.webapp.config import daconfig, in_cron
+    from docassemble.webapp.config import daconfig, in_cron, require_secret_key
     from docassemble.webapp import setup
     setup.init_app(the_app)
     import docassemble.webapp.log_initialize
     # secret key
-    the_app.secret_key = daconfig.get('secretkey', '38ihfiFehfoU34mcq_4clirglw3g4o87')
+    the_app.secret_key = require_secret_key()
     # flask-sqlalchemy
     from docassemble.webapp import flask_sql_config
     flask_sql_config.init_app(the_app, other_databases=True)

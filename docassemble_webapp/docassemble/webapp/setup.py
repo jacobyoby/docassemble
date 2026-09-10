@@ -1,7 +1,7 @@
 import re
 import importlib
 from datetime import timedelta
-from docassemble.webapp.config import daconfig, DEFAULT_SECRET_KEY, da_version
+from docassemble.webapp.config import daconfig, require_secret_key, da_version
 from docassemble.webapp.database import alchemy_connection_string
 from .twilio.helpers import twilio_config
 
@@ -93,7 +93,7 @@ def init_app(app):
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000
     alchemy_connect_string = alchemy_connection_string()
     app.config['SQLALCHEMY_DATABASE_URI'] = alchemy_connect_string
-    app.secret_key = daconfig.get('secretkey', DEFAULT_SECRET_KEY)
+    app.secret_key = require_secret_key()
     app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
     app.config['ENABLE_MANAGE_ACCOUNT'] = daconfig.get('user can delete account', True)
     app.config['ENABLE_REQUEST_DEVELOPER_ACCOUNT'] = daconfig.get('user can request developer account', False)
