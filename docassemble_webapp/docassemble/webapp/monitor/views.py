@@ -15,6 +15,8 @@ from flask import (
 )
 from flask_login import current_user
 import twilio
+import twilio.twiml.voice_response
+from twilio.request_validator import RequestValidator
 from docassemble_flask_user import login_required, roles_required
 from docassemble.base.language.control import set_language
 from docassemble.base.language.words import word
@@ -46,6 +48,24 @@ from docassemble.webapp.utils.hooks import url_for
 from docassemble.webapp.utils.logger import logmessage
 from .blueprint import monitor_bp
 
+def twilio_voice_auth_ok(post_data):
+    # NB: a posted AccountSid is a non-secret identifier, not proof of
+    # origin. Validate the Twilio signature against the auth token of the
+    # matching configured account, mirroring the fax callbacks (#44). Any
+    # configured account may match; accounts without an auth token cannot
+    # verify and are skipped, failing closed.
+    if "AccountSid" not in post_data:
+        return False
+    signature = request.headers.get('X-Twilio-Signature', '')
+    for config_info in twilio_config['name'].values():
+        if config_info.get('account sid') != post_data["AccountSid"]:
+            continue
+        auth_token = config_info.get('auth token')
+        if auth_token and RequestValidator(auth_token).validate(request.url, post_data, signature):
+            return True
+    return False
+
+
 @monitor_bp.route("/digits", methods=['POST', 'GET'])
 @csrf.exempt
 def digits_endpoint():
@@ -54,11 +74,12 @@ def digits_endpoint():
     if twilio_config is None:
         logmessage("digits: ignoring call to digits because Twilio not enabled")
         return Response(str(resp), mimetype='text/xml')
-    if "AccountSid" not in request.form or request.form["AccountSid"] != twilio_config['name']['default'].get('account sid', None):
+    post_data = request.form.copy()
+    if not twilio_voice_auth_ok(post_data):
         logmessage("digits: request to digits did not authenticate")
-        return Response(str(resp), mimetype='text/xml')
-    if "Digits" in request.form:
-        the_digits = re.sub(r'[^0-9]', '', request.form["Digits"])
+        return Response('', status=403)
+    if "Digits" in post_data:
+        the_digits = re.sub(r'[^0-9]', '', post_data["Digits"])
         logmessage("digits: got " + str(the_digits))
         phone_number = r.get('da:callforward:' + str(the_digits))
         if phone_number is None:
@@ -86,9 +107,10 @@ def voice():
     if 'voice' not in twilio_config['name']['default'] or twilio_config['name']['default']['voice'] in (False, None):
         logmessage("voice: ignoring call to voice because voice feature not enabled")
         return Response(str(resp), mimetype='text/xml')
-    if "AccountSid" not in request.form or request.form["AccountSid"] != twilio_config['name']['default'].get('account sid', None):
+    post_data = request.form.copy()
+    if not twilio_voice_auth_ok(post_data):
         logmessage("voice: request to voice did not authenticate")
-        return Response(str(resp), mimetype='text/xml')
+        return Response('', status=403)
     for item in request.form:
         logmessage("voice: item " + str(item) + " is " + str(request.form[item]))
     with resp.gather(action=url_for('monitor.digits_endpoint'), finishOnKey='#', method="POST", timeout=10, numDigits=5) as gg:
