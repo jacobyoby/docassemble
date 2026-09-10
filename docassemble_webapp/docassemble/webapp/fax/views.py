@@ -1,3 +1,4 @@
+import hmac
 import json
 from flask import request, Blueprint, Response
 from twilio.request_validator import RequestValidator
@@ -48,12 +49,28 @@ def fax_callback():
     return ('', 204)
 
 
+def clicksend_basic_auth_ok(auth):
+    # NB: the send-side record carries no config name, so credentials are
+    # accepted when they match ANY configured api username/key pair. All
+    # pairs are the server's own ClickSend credentials; matching proves the
+    # caller holds them. Comparisons are constant-time.
+    if auth is None or not auth.username or not auth.password:
+        return False
+    for config_info in clicksend_config['name'].values():
+        if hmac.compare_digest(str(auth.username), str(config_info.get('api username') or '')) and hmac.compare_digest(str(auth.password), str(config_info.get('api key') or '')):
+            return True
+    return False
+
+
 @fax_bp.route("/clicksend_fax_callback", methods=['POST'])
 @csrf.exempt
 def clicksend_fax_callback():
     if clicksend_config is None or fax_provider != 'clicksend':
         logmessage("clicksend_fax_callback: Clicksend not enabled")
         return ('', 204)
+    if not clicksend_basic_auth_ok(request.authorization):
+        logmessage("clicksend_fax_callback: invalid basic auth credentials")
+        return Response('', status=403)
     post_data = request.form.copy()
     if 'message_id' not in post_data:
         logmessage("clicksend_fax_callback: message_id missing")
