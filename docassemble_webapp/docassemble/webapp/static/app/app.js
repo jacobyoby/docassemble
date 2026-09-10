@@ -1041,6 +1041,7 @@ var daAddressAjaxTimeout = null;
 var daAddressAjaxTimeoutRunning = null;
 var daAddressAjaxTimeoutCallAfter = null;
 var daShowHideHappened = false;
+var daShowIfSetupComplete = false;
 var daCheckinInterval = null;
 var daInitialCheckinTimeout = null;
 var daReloader = null;
@@ -1081,6 +1082,7 @@ var daLiveHelpMessage;
 var daLiveHelpMessagePhone;
 var daNewChatMessage;
 var daLiveHelpAvailableMessage;
+var daAnnounceShowIfMessage;
 var daScreenBeingControlled;
 var daScreenNoLongerBeingControlled;
 var daPathRoot;
@@ -1105,11 +1107,18 @@ var daEmailAddressRequired;
 var daNeedCompleteEmail;
 var daDefaultPopoverTrigger;
 var daToggleWord;
+var daPleaseWaitWord;
 var daCheckinUrlWithInterview;
 var daReloadAfterSeconds;
 var daCustomItems;
 var daTrackingEnabled;
 
+function daAnnounceShowIfReveal() {
+  if (!daShowIfSetupComplete) {
+    return;
+  }
+  da_flash(daAnnounceShowIfMessage, "aria");
+}
 function dagoogleapicallback() {}
 function daForceFullScreen(data) {
   if (data.steps > 1 && window != top) {
@@ -1739,14 +1748,22 @@ function flash(message, priority, clear) {
     $("#daflash").empty();
   }
   if (message != null) {
-    var newElement = $(daSprintf(daNotificationMessage, priority, message));
-    $("#daflash").append(newElement);
-    if (priority == "success") {
+    if (priority == "aria") {
+      var newElement = $('<div>').addClass('visually-hidden').text(message);
+      $("#daflash").append(newElement);
       setTimeout(function () {
-        newElement.hide(300, function () {
-          $(this).remove();
-        });
-      }, 3000);
+        newElement.remove();
+      }, 2000);
+    } else {
+      var newElement = $(daSprintf(daNotificationMessage, priority, message));
+      $("#daflash").append(newElement);
+      if (priority == "success") {
+        setTimeout(function () {
+          newElement.hide(300, function () {
+            $(this).remove();
+          });
+        }, 3000);
+      }
     }
   }
 }
@@ -2325,7 +2342,7 @@ function daInjectTrim(handler) {
         element.type !== "file")
     ) {
       setTimeout(function () {
-        element.value = $.trim(element.value);
+        element.value = element.value.trim();
       }, 10);
     }
     return handler.call(this, element, event);
@@ -2388,7 +2405,7 @@ function daValidationHandler(form) {
       if (
         $(this).attr("name") &&
         $(this).attr("type") != "hidden" &&
-        (($(this).hasClass("da-active-invisible") &&
+        (($(this).hasClass("da-to-labelauty") &&
           $(this).parent().is(":visible")) ||
           $(this).is(":visible"))
       ) {
@@ -3065,6 +3082,13 @@ $(document).on("keydown", function (e) {
     }
   }
 });
+$(document).on("click", "a.daskiplink", function (e) {
+  e.preventDefault();
+  var target = document.getElementById($(this).attr("href").substring(1));
+  if (target != null) {
+    target.focus();
+  }
+});
 function daShowErrorScreen(data, error) {
   console.log("daShowErrorScreen: " + error);
   if ("activeElement" in document) {
@@ -3736,17 +3760,20 @@ function daStopCheckingIn() {
   }
 }
 function daShowSpinner() {
+  da_flash(daPleaseWaitWord, "aria");
   if ($("#daquestion").length > 0) {
     $(
-      '<div id="daSpinner" class="da-spinner-container da-top-for-navbar"><div class="container"><div class="row"><div class="col text-center"><span class="da-spinner"><i class="fa-solid fa-spinner fa-spin"></i></span></div></div></div></div>',
+      '<div id="daSpinner" class="da-spinner-container da-top-for-navbar" role="status"><div class="container"><div class="row"><div class="col text-center"><span class="da-spinner" aria-hidden="true"><i class="fa-solid fa-spinner fa-spin"></i></span></div></div></div></div>',
     ).appendTo(daTargetDiv);
   } else {
     var newSpan = document.createElement("span");
-    var newI = document.createElement("i");
-    $(newI).addClass("fa-solid fa-spinner fa-spin");
-    $(newI).appendTo(newSpan);
     $(newSpan).attr("id", "daSpinner");
     $(newSpan).addClass("da-sig-spinner da-top-for-navbar");
+    $(newSpan).attr("role", "status");
+    var newI = document.createElement("i");
+    $(newI).addClass("fa-solid fa-spinner fa-spin");
+    $(newI).attr("aria-hidden", "true");
+    $(newI).appendTo(newSpan);
     $(newSpan).appendTo("#dasigtoppart");
   }
   daShowingSpinner = true;
@@ -3876,7 +3903,8 @@ function daShowNotifications() {
       message.priority == "info" ||
       message.priority == "dark" ||
       message.priority == "light" ||
-      message.priority == "primary"
+      message.priority == "primary" ||
+      message.priority == "aria"
     ) {
       da_flash(message.message, message.priority);
     } else {
@@ -3917,12 +3945,6 @@ function daDisableIfNotHidden(query, value) {
           daComboBoxes[$(this).attr("id")].disable();
         } else {
           daComboBoxes[$(this).attr("id")].enable();
-        }
-      } else if ($(this).hasClass("dafile")) {
-        if (value) {
-          $(this).data("fileinput").disable();
-        } else {
-          $(this).data("fileinput").enable();
         }
       } else if ($(this).hasClass("daslider")) {
         if (value) {
@@ -4193,6 +4215,22 @@ function camelToUnderscore(camelStr) {
     .replace(/^_/, "");
 }
 
+function daFocusMainQuestion() {
+  var mainQuestion = document.getElementById("daMainQuestion");
+  if (mainQuestion) {
+    mainQuestion.focus({ preventScroll: true });
+    return;
+  }
+  var target = $(daTargetDiv)[0];
+  if (target) {
+    if (!target.hasAttribute("tabindex")) {
+      target.setAttribute("tabindex", "-1");
+    }
+    $(target).addClass("da-no-outline");
+    target.focus({ preventScroll: true });
+  }
+}
+
 function daInitialize(doScroll) {
   if (!daObserverMode) {
     daResetCheckinCode();
@@ -4217,11 +4255,6 @@ function daInitialize(doScroll) {
   //   e.preventDefault();
   //   $(this).tab('show');
   // });
-  $("input.dafile").fileinput({
-    theme: "fas",
-    language: document.documentElement.lang,
-    allowedPreviewTypes: ["image"],
-  });
   $(".datableup,.databledown").click(function (e) {
     e.preventDefault();
     $(this).blur();
@@ -4264,11 +4297,6 @@ function daInitialize(doScroll) {
     .find("input.daslider")
     .each(function () {
       $(this).slider("disable");
-    });
-  $(".dacollectextra")
-    .find("input.dafile")
-    .each(function () {
-      $(this).data("fileinput").disable();
     });
   $("#da-extra-collect").on("click", function () {
     $("<input>")
@@ -4315,14 +4343,6 @@ function daInitialize(doScroll) {
             $(this).slider("enable");
           }
         });
-      $('[data-collectnum="' + num + '"]')
-        .find("input.dafile")
-        .each(function () {
-          var showifParents = $(this).parents(".dajsshowif,.dashowif");
-          if (showifParents.length == 0 || $(showifParents[0]).is(":visible")) {
-            $(this).data("fileinput").enable();
-          }
-        });
       $(this)
         .parent()
         .find("button.dacollectremove")
@@ -4366,11 +4386,6 @@ function daInitialize(doScroll) {
       .each(function () {
         $(this).slider("disable");
       });
-    $('[data-collectnum="' + num + '"]')
-      .find("input.dafile")
-      .each(function () {
-        $(this).data("fileinput").disable();
-      });
     $(this).parent().find("button.dacollectadd").removeClass("dainvisible");
     $(this).parent().find("span.dacollectnum").addClass("dainvisible");
     $(this).addClass("dainvisible");
@@ -4402,11 +4417,6 @@ function daInitialize(doScroll) {
       .each(function () {
         $(this).slider("disable");
       });
-    $('[data-collectnum="' + num + '"]')
-      .find("input.dafile")
-      .each(function () {
-        $(this).data("fileinput").disable();
-      });
     $(this)
       .parent()
       .find("button.dacollectunremove")
@@ -4436,11 +4446,6 @@ function daInitialize(doScroll) {
       .find("input.daslider")
       .each(function () {
         $(this).slider("enable");
-      });
-    $('[data-collectnum="' + num + '"]')
-      .find("input.dafile")
-      .each(function () {
-        $(this).data("fileinput").enable();
       });
     $(this)
       .parent()
@@ -4589,12 +4594,6 @@ function daInitialize(doScroll) {
       selects[i].appendChild(document.createElement("optgroup"));
     }
   }
-  $(".da-to-labelauty").labelauty({
-    class: "labelauty da-active-invisible dafullwidth",
-  });
-  $(".da-to-labelauty-icon").labelauty({ label: false });
-  $("input[type=radio].da-to-labelauty:checked").trigger("change");
-  $("input[type=radio].da-to-labelauty-icon:checked").trigger("change");
   $("button").on("click", function () {
     daWhichButton = this;
     return true;
@@ -4982,9 +4981,13 @@ function daInitialize(doScroll) {
       var prev = $(this).prev();
       if (prev && !prev.hasClass("active")) {
         var toggler;
+        var boxId = $(box).attr("id");
+        var ariaControls = boxId ? ' aria-controls="' + boxId + '"' : "";
         if ($(box).hasClass("danotshowing")) {
           toggler = $(
-            '<a href="#" class="toggler" role="button" aria-pressed="false">',
+            '<button type="button" class="toggler" aria-expanded="false"' +
+              ariaControls +
+              ">",
           );
           $('<i class="fa-solid fa-caret-right">').appendTo(toggler);
           $(
@@ -4992,14 +4995,16 @@ function daInitialize(doScroll) {
           ).appendTo(toggler);
         } else {
           toggler = $(
-            '<a href="#" class="toggler" role="button" aria-pressed="true">',
+            '<button type="button" class="toggler" aria-expanded="true"' +
+              ariaControls +
+              ">",
           );
           $('<i class="fa-solid fa-caret-down">').appendTo(toggler);
           $(
             '<span class="visually-hidden">' + daToggleWord + "</span>",
           ).appendTo(toggler);
         }
-        toggler.appendTo(prev);
+        toggler.insertAfter(prev);
         toggler.on("click", function (e) {
           var oThis = this;
           $(this)
@@ -5010,14 +5015,14 @@ function daInitialize(doScroll) {
                 $(this).addClass("fa-caret-right");
                 $(this).attr("data-icon", "caret-right");
                 $(box).hide();
-                $(oThis).attr("aria-pressed", "false");
+                $(oThis).attr("aria-expanded", "false");
                 $(box).toggleClass("danotshowing");
               } else if ($(this).attr("data-icon") == "caret-right") {
                 $(this).removeClass("fa-caret-right");
                 $(this).addClass("fa-caret-down");
                 $(this).attr("data-icon", "caret-down");
                 $(box).show();
-                $(oThis).attr("aria-pressed", "true");
+                $(oThis).attr("aria-expanded", "true");
                 $(box).toggleClass("danotshowing");
               }
             });
@@ -5030,19 +5035,19 @@ function daInitialize(doScroll) {
     $("body").focus();
     if (!daJsEmbed && !isAndroid) {
       setTimeout(function () {
-        var firstInput = $("#daform .da-field-container")
+        var firstInput = $("#daform")
           .not(".da-field-container-note")
           .first()
           .find("input, textarea, select")
           .filter(":visible")
           .first();
         if (firstInput.length > 0 && $(firstInput).visible()) {
-          $(firstInput).focus();
+          $(firstInput).focus().get(0).focus({ focusVisible: true });
           var inputType = $(firstInput).attr("type");
           if (
             $(firstInput).prop("tagName") != "SELECT" &&
-            inputType != "checkbox" &&
             inputType != "radio" &&
+            inputType != "checkbox" &&
             inputType != "hidden" &&
             inputType != "submit" &&
             inputType != "file" &&
@@ -5061,17 +5066,11 @@ function daInitialize(doScroll) {
             }
           }
         } else {
-          var firstButton = $("#danavbar-collapse .nav-link")
-            .filter(":visible")
-            .first();
-          if (firstButton.length > 0 && $(firstButton).visible()) {
-            setTimeout(function () {
-              $(firstButton).focus();
-              $(firstButton).blur();
-            }, 0);
-          }
+          daFocusMainQuestion();
         }
       }, 15);
+    } else {
+      daFocusMainQuestion();
     }
   }
   $("input.dauncheckspecificothers").on("change", function () {
@@ -5391,6 +5390,7 @@ function daInitialize(doScroll) {
     }
   }
   daShowIfInProcess = true;
+  daShowIfSetupComplete = false;
   var daTriggerQueries = [];
   var daInputsSeen = {};
   function daOnlyUnique(value, index, self) {
@@ -5442,6 +5442,7 @@ function daInitialize(doScroll) {
             if (showIfSign) {
               if ($(showIfDiv).data("isVisible") != "1") {
                 daShowHideHappened = true;
+                daAnnounceShowIfReveal();
               }
               if (showIfMode == 0) {
                 $(showIfDiv).show(speed);
@@ -5463,11 +5464,6 @@ function daInitialize(doScroll) {
                 .find("input.daslider")
                 .each(function () {
                   $(this).slider("enable");
-                });
-              $(showIfDiv)
-                .find("input.dafile")
-                .each(function () {
-                  $(this).data("fileinput").enable();
                 });
             } else {
               if ($(showIfDiv).data("isVisible") != "0") {
@@ -5493,11 +5489,6 @@ function daInitialize(doScroll) {
                 .find("input.daslider")
                 .each(function () {
                   $(this).slider("disable");
-                });
-              $(showIfDiv)
-                .find("input.dafile")
-                .each(function () {
-                  $(this).data("fileinput").disable();
                 });
             }
           } else {
@@ -5526,14 +5517,10 @@ function daInitialize(doScroll) {
                 .each(function () {
                   $(this).slider("disable");
                 });
-              $(showIfDiv)
-                .find("input.dafile")
-                .each(function () {
-                  $(this).data("fileinput").disable();
-                });
             } else {
               if ($(showIfDiv).data("isVisible") != "1") {
                 daShowHideHappened = true;
+                daAnnounceShowIfReveal();
               }
               if (showIfMode == 0) {
                 $(showIfDiv).show(speed);
@@ -5555,11 +5542,6 @@ function daInitialize(doScroll) {
                 .find("input.daslider")
                 .each(function () {
                   $(this).slider("enable");
-                });
-              $(showIfDiv)
-                .find("input.dafile")
-                .each(function () {
-                  $(this).data("fileinput").enable();
                 });
             }
           }
@@ -5710,6 +5692,7 @@ function daInitialize(doScroll) {
           if (showIfSign) {
             if ($(showIfDiv).data("isVisible") != "1") {
               daShowHideHappened = true;
+              daAnnounceShowIfReveal();
             }
             if (showIfMode == 0) {
               $(showIfDiv).show(speed);
@@ -5737,11 +5720,6 @@ function daInitialize(doScroll) {
                 .each(function () {
                   $(this).slider("enable");
                 });
-              $(showIfDiv)
-                .find("input.dafile")
-                .each(function () {
-                  $(this).data("fileinput").enable();
-                });
             }
           } else {
             if ($(showIfDiv).data("isVisible") != "0") {
@@ -5765,11 +5743,6 @@ function daInitialize(doScroll) {
               .find("input.daslider")
               .each(function () {
                 $(this).slider("disable");
-              });
-            $(showIfDiv)
-              .find("input.dafile")
-              .each(function () {
-                $(this).data("fileinput").disable();
               });
           }
         } else {
@@ -5796,14 +5769,10 @@ function daInitialize(doScroll) {
               .each(function () {
                 $(this).slider("disable");
               });
-            $(showIfDiv)
-              .find("input.dafile")
-              .each(function () {
-                $(this).data("fileinput").disable();
-              });
           } else {
             if ($(showIfDiv).data("isVisible") != "1") {
               daShowHideHappened = true;
+              daAnnounceShowIfReveal();
             }
             if (showIfMode == 0) {
               $(showIfDiv).show(speed);
@@ -5830,11 +5799,6 @@ function daInitialize(doScroll) {
                 .find("input.daslider")
                 .each(function () {
                   $(this).slider("enable");
-                });
-              $(showIfDiv)
-                .find("input.dafile")
-                .each(function () {
-                  $(this).data("fileinput").enable();
                 });
             }
           }
@@ -5912,6 +5876,7 @@ function daInitialize(doScroll) {
   if (daTriggerQueries.length > 0) {
     daTriggerAllShowHides();
   }
+  daShowIfSetupComplete = true;
   $(".danavlink").last().addClass("thelast");
   $(".danavlink").each(function () {
     if ($(this).hasClass("btn") && !$(this).hasClass("danotavailableyet")) {
@@ -6094,7 +6059,7 @@ function daConfigureJqueryFuncs() {
         }
       } else if (element.parent(".input-group").length) {
         error.insertAfter(element.parent());
-      } else if (element.hasClass("da-active-invisible")) {
+      } else if (element.hasClass("da-to-labelauty")) {
         var choice_with_help = $(element).parents(".dachoicewithhelp").first();
         if (choice_with_help.length > 0) {
           $(choice_with_help).parent().append(error);
@@ -6398,15 +6363,15 @@ function daReadyFunction() {
       $("#dabackbutton").submit();
     }
   };
-  $(window).bind("unload", function () {
-    if (!daObserverMode) {
-      daStopCheckingIn();
-    }
-    if (daSocket != null && daSocket.connected) {
-      //console.log('Terminating interview socket because window unloaded');
-      daSocket.emit("terminate");
-    }
-  });
+  /* $(window).bind("unload", function () {
+   *   if (!daObserverMode) {
+   *     daStopCheckingIn();
+   *   }
+   *   if (daSocket != null && daSocket.connected) {
+   *     //console.log('Terminating interview socket because window unloaded');
+   *     daSocket.emit("terminate");
+   *   }
+   * }); */
   var daDefaultAllowList = bootstrap.Tooltip.Default.allowList;
   daDefaultAllowList["*"].push("style");
   daDefaultAllowList["a"].push("style");

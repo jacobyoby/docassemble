@@ -32,15 +32,15 @@ Tracked as GitHub issues on the fork, label `enhancement`.
 - [#17](https://github.com/jacobyoby/docassemble/issues/17) Cloudron
   packaging for self-hosting (upstream #917). Not verifiable without a
   Cloudron instance; left open.
-- **Interview bundle split** — `bundle.min.js` (983 KB: jQuery, Bootstrap,
-  validate, fileinput, labelauty, socket.io, app.js) is now the whole
+- **Interview bundle split** — `bundle.min.js` (jQuery, Bootstrap,
+  validate, socket.io, app.js) is now the whole
   remaining weight of a public interview page after the FontAwesome swap
-  (#19). Splitting it is a large refactor with every widget depending on
+  (#19) and upstream's labelauty removal (1.10.8). Splitting it is a large refactor with every widget depending on
   it; measure with pagesize_check.sh before/after. Half a day+.
 
 ## Ship the fork to forms.jacobrakai.org
 
-forms runs **stock** docassemble 1.10.7 + the NJForms pip package, not
+forms runs **stock** docassemble 1.10.8 + the NJForms pip package, not
 this fork (verified on the live interview head). The whole
 `/usr/share/docassemble` tree, venv included, lives on the container
 volume, so a new *image* is masked by the existing venv and changes
@@ -72,8 +72,8 @@ NJForms: `docker cp` the fork's `docassemble_base` and
 - [ ] **Scheduled upstream sync**: weekly Action to fetch upstream
   master, rebase jacob/maintained, force-push on green CI, open an
   issue on conflict.
-- [ ] **Watch upstream PR #983** (bool config): merged means dropping
-  commit 24b0275 on the next rebase.
+- [x] **Watch upstream PR #983** (bool config): merged in upstream
+  1.10.8 (c1e3a98); commit 24b0275 dropped on the 1.10.8 rebase.
 - [ ] **Upstream the clearer-error commit** (7315492): behavior-neutral,
   answers upstream #981; small PR candidate.
 - [ ] **Upstream the tar-slip fix** (`filter='data'` in

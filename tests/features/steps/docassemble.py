@@ -10,6 +10,7 @@ from behave import (
 )  # pylint: disable=import-error,no-name-in-module
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException
@@ -87,13 +88,7 @@ def login(context, username, password):
 
 @step(r'I upload the file "(?P<value>[^"]*)"')
 def do_upload(context, value):
-    time.sleep(2)
-    div = context.browser.find_element(By.CSS_SELECTOR, 'div.btn-file')
-    context.browser.execute_script('arguments[0].style = ""; arguments[0].style.position = "inherit";', div)
-    span = context.browser.find_element(By.CSS_SELECTOR, 'span.hidden-xs')
-    context.browser.execute_script('arguments[0].style = ""; arguments[0].style.display = "none";', span)
     elem = context.browser.find_element(By.CSS_SELECTOR, 'input[type="file"]')
-    context.browser.execute_script('arguments[0].style = ""; arguments[0].style.display = "block"; arguments[0].style.visibility = "visible"; arguments[0].style.opacity = "100";', elem)
     elem.clear()
     elem.send_keys(value)
     time.sleep(2)
@@ -131,6 +126,13 @@ def wait_forever(context):
 def launch_interview(context, interview_name):
     context.browser.get(context.da_path + "/interview?i=" + interview_name + '&reset=2')
     time.sleep(1)
+
+
+@step(r'I visit the page "(?P<path>[^"]+)"')
+def visit_page(context, path):
+    do_wait(context)
+    context.browser.get(context.da_path + path)
+    context.browser.wait_for_it()
 
 
 @step(r'I start the interview "(?P<interview_name>[^"]+)"')
@@ -270,6 +272,15 @@ def click_link(context, link_name):
             EC.element_to_be_clickable((By.XPATH, '//a[text()="' + link_name + '"]'))
         )
         elem.click()
+    context.browser.wait_for_it()
+
+
+@step(r'I click the summary "(?P<summary_name>[^"]+)"')
+def click_summary(context, summary_name):
+    elem = WebDriverWait(context.browser, 10).until(
+        EC.element_to_be_clickable((By.XPATH, '//summary[text()[contains(.,"' + summary_name + '")]]'))
+    )
+    elem.click()
     context.browser.wait_for_it()
 
 
@@ -523,20 +534,18 @@ def set_mc_option_under(context, option, label):
         label += " "
         div = context.browser.find_element(By.XPATH, '//div[contains(@class, "da-legend")][text()="' + label + '"]/following-sibling::div')
     try:
-        span = div.find_element(By.XPATH, './/span[text()="' + option + '"]')
+        option_label = div.find_element(By.XPATH, './/label[text()="' + option + '"]')
     except:
-        span = div.find_element(By.XPATH, './/span[text()[contains(.,"' + option + '")]]')
-    option_label = span.find_element(By.XPATH, "..")
+        option_label = div.find_element(By.XPATH, './/label[text()[contains(.,"' + option + '")]]')
     option_label.click()
 
 
 @step(r'I click the "(?P<choice>[^"]+)" option')
 def set_mc_option(context, choice):
     try:
-        span_elem = context.browser.find_element(By.XPATH, '//form[@id="daform"]//span[text()="' + choice + '"]')
+        label_elem = context.browser.find_element(By.XPATH, '//form[@id="daform"]//label[text()="' + choice + '"]')
     except NoSuchElementException:
-        span_elem = context.browser.find_element(By.XPATH, '//form[@id="daform"]//span[text()[contains(.,"' + choice + '")]]')
-    label_elem = span_elem.find_element(By.XPATH, "..")
+        label_elem = context.browser.find_element(By.XPATH, '//form[@id="daform"]//label[text()[contains(.,"' + choice + '")]]')
     label_elem.click()
 
 
@@ -548,32 +557,28 @@ def set_mc_option_under_pre(context, option, label):
         label += " "
         div = context.browser.find_element(By.XPATH, '//div[contains(@class, "da-legend")][text()="' + label + '"]/following-sibling::div')
     try:
-        span = div.find_element(By.XPATH, './/span[text()="' + option + '"]')
+        option_label = div.find_element(By.XPATH, './/label[text()="' + option + '"]')
     except:
-        span = div.find_element(By.XPATH, './/span[text()[contains(.,"' + option + '")]]')
-    option_label = span.find_element(By.XPATH, "..")
+        option_label = div.find_element(By.XPATH, './/label[text()[contains(.,"' + option + '")]]')
     option_label.click()
 
 
 @step(r'I click the option "(?P<choice>[^"]+)"')
 def set_mc_option_pre(context, choice):
     try:
-        span_elem = context.browser.find_element(By.XPATH, '//span[text()="' + choice + '"]')
+        label_elem = context.browser.find_element(By.XPATH, '//label[text()="' + choice + '"]')
     except NoSuchElementException:
-        span_elem = context.browser.find_element(By.XPATH, '//span[text()[contains(.,"' + choice + '")]]')
-    label_elem = span_elem.find_element(By.XPATH, "..")
+        label_elem = context.browser.find_element(By.XPATH, '//label[text()[contains(.,"' + choice + '")]]')
     label_elem.click()
 
 
 @step(r'I click the (?P<ordinal>first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth) option "(?P<choice>[^"]+)"')
 def set_nth_mc_option_pre(context, ordinal, choice):
     try:
-        span_elem = context.browser.find_element(By.XPATH, '(//span[text()="' + choice + '"])[' + str(number_from_ordinal[ordinal]) + ']')
+        label_elem = context.browser.find_element(By.XPATH, '(//label[text()="' + choice + '"])[' + str(number_from_ordinal[ordinal]) + ']')
     except NoSuchElementException:
-        span_elem = context.browser.find_element(By.XPATH, '(//span[text()[contains(.,"' + choice + '")]])[' + str(number_from_ordinal[ordinal]) + ']')
-    label_elem = span_elem.find_element(By.XPATH, "..")
+        label_elem = context.browser.find_element(By.XPATH, '(//label[text()[contains(.,"' + choice + '")]])[' + str(number_from_ordinal[ordinal]) + ']')
     label_elem.click()
-    # span_elem.click()
 
 
 @step(r'I should see "(?P<title>[^"]+)" as the title of the page')
@@ -617,6 +622,39 @@ def change_window_size(context, xdimen, ydimen):
 @step(r'I unfocus')
 def unfocus(context):
     context.browser.execute_script("document.activeElement.blur();")
+
+
+@step(r'I focus the (?P<page_type>interview|site) skip link')
+def focus_skip_link(context, page_type):
+    target = "#daquestion" if page_type == "interview" else "#damain"
+    skip_link = context.browser.find_element(By.CSS_SELECTOR, f'a[href="{target}"]')
+    assert skip_link.get_attribute("tabindex") == "0"
+    context.browser.execute_script("arguments[0].focus();", skip_link)
+
+
+@step(r'the (?P<page_type>interview|site) skip link should have focus')
+def skip_link_has_focus(context, page_type):
+    target = "#daquestion" if page_type == "interview" else "#damain"
+
+    def active_skip_link(browser):
+        active_element = browser.switch_to.active_element
+        href = active_element.get_attribute("href")
+        return active_element if href and href.endswith(target) else False
+
+    WebDriverWait(context.browser, 10).until(active_skip_link)
+
+
+@step(r'I activate the focused link')
+def activate_focused_link(context):
+    context.browser.switch_to.active_element.send_keys(Keys.ENTER)
+
+
+@step(r'the (?P<page_type>interview|site) main content should have focus')
+def main_content_has_focus(context, page_type):
+    target = "daquestion" if page_type == "interview" else "damain"
+    WebDriverWait(context.browser, 10).until(
+        lambda browser: browser.switch_to.active_element.get_attribute("id") == target
+    )
 
 
 @step(r'I click the final link "(?P<link_name>[^"]+)"')

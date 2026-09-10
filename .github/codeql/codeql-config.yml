@@ -20,7 +20,6 @@ paths-ignore:
   - '**/static/app/adminbundle.js'
   - '**/static/app/cm6.js'
   # Vendored third-party libraries (upstream owns these).
-  - '**/static/labelauty/**'
   - '**/static/tom-select/**'
   - '**/static/bootstrap*/**'
   - '**/static/jquery*'

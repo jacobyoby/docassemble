@@ -1143,6 +1143,7 @@ def standard_app_values():
         "daLiveHelpMessagePhone": word("Click here to get help over the phone."),
         "daNewChatMessage": word("New chat message"),
         "daLiveHelpAvailableMessage": word("Live chat is available"),
+        "daAnnounceShowIfMessage": word("Additional fields have appeared on the screen."),
         "daScreenBeingControlled": word("Your screen is being controlled by an operator."),
         "daScreenNoLongerBeingControlled": word("The operator is no longer controlling your screen."),
         "daPathRoot": ROOT,
@@ -1157,10 +1158,9 @@ def standard_app_values():
         "daSecureCookies": bool(current_app.config['SESSION_COOKIE_SECURE']),
         "daEmailAddressRequired": word("An e-mail address is required."),
         "daNeedCompleteEmail": word("You need to enter a complete e-mail address."),
-        "daToggleWord": word("Toggle")
+        "daToggleWord": word("Toggle"),
+        "daPleaseWaitWord": word("Please wait . . .")
     }
-
-
 
 
 def get_history(interview, interview_status):

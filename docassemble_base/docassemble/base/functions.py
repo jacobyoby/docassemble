@@ -2189,16 +2189,18 @@ class DANav:
             else:
                 show_links = True
         if style == "inline":
-            the_class = 'danavlinks dainline'
-            interior_class = 'dainlineinside'
+            the_class = 'danavlinks dainline list-inline m-0'
+            interior_class = 'dainlineinside list-inline m-0'
             a_class = "btn " + get_button_class_prefix() + "secondary danavlink "
+            li_class = 'list-inline-item'
         else:
             if not self.visible():
                 return ''
-            the_class = 'danavlinks'
+            the_class = 'danavlinks list-unstyled m-0'
             interior_class = None
             a_class = None
-        return '  <div class="dasections"><div class="' + the_class + '">' + "\n" + navigation_bar(self, this_thread.interview, wrapper=False, inner_div_class=interior_class, a_class=a_class, show_links=show_links, show_nesting=False, include_arrows=True) + '  </div></div>' + "\n"
+            li_class = 'nav-item'
+        return '  <div class="dasections"><ol class="' + the_class + '" role="list">' + "\n" + navigation_bar(self, this_thread.interview, wrapper=False, inner_div_class=interior_class, a_class=a_class, show_links=show_links, show_nesting=False, include_arrows=True, li_class=li_class) + '  </ol></div>' + "\n"
 
 # word('This field is required.')
 # word('Country Code')
@@ -3670,6 +3672,7 @@ def process_action():
                     del this_thread.current_info['action_list']._necessary_length
                 if hasattr(this_thread.current_info['action_list'], 'ask_number') and this_thread.current_info['action_list'].ask_number and hasattr(this_thread.current_info['action_list'], 'target_number') and int(this_thread.current_info['action_list'].target_number) > 0:
                     this_thread.current_info['action_list'].target_number = int(this_thread.current_info['action_list'].target_number) - 1
+                log(word('Deleted'), 'aria')
             except BaseException as err:
                 logmessage("process_action: _da_list_remove error: " + str(err))
                 try:
@@ -3694,6 +3697,7 @@ def process_action():
                     this_thread.current_info['action_dict'].there_are_any = False
                 if hasattr(this_thread.current_info['action_dict'], 'ask_number') and this_thread.current_info['action_dict'].ask_number and hasattr(this_thread.current_info['action_dict'], 'target_number') and int(this_thread.current_info['action_dict'].target_number) > 0:
                     this_thread.current_info['action_dict'].target_number = int(this_thread.current_info['action_dict'].target_number) - 1
+                log(word('Deleted'), 'aria')
             except BaseException as err:
                 logmessage("process_action: _da_dict_remove error: " + str(err))
                 try:
@@ -5135,13 +5139,13 @@ def showif(var, condition, alternative=''):
 def log(the_message, priority='log'):
     """Log a message to the server log, the browser console, or the user's screen.
 
-    Args:
-        the_message (str): The message to log.
-        priority (str, optional): Destination and style. Use ``'log'`` for
-            the server log, ``'console'`` for the browser console,
-            ``'javascript'`` to run the message as JavaScript, or a
-            Bootstrap alert level (``'success'``, ``'info'``, ``'danger'``,
-            etc.) to show a popup notification. Defaults to ``'log'``.
+    Args: the_message (str): The message to log.  priority (str,
+        optional): Destination and style. Use ``'log'`` for the server
+        log, ``'console'`` for the browser console, ``'javascript'``
+        to run the message as JavaScript, ``'aria'`` for a message to
+        users of screen readers, or a Bootstrap alert level
+        (``'success'``, ``'info'``, ``'danger'``, etc.) to show a
+        popup notification. Defaults to ``'log'``.
     """
     if priority == 'log':
         logmessage(str(the_message))
