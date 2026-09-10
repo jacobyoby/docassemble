@@ -185,6 +185,12 @@ jobs:
           PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
           docker exec da "$PY" /tmp/ast_guard_check.py
 
+      - name: XSS escaping - forwarded IP renders escaped, plain IP intact (#36)
+        run: |
+          docker cp .github/workflows/e2e/xss_escape_check.py da:/tmp/xss_escape_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/xss_escape_check.py
+
       - name: Issue-968 - patched server must report the real attribute
         run: bash .github/workflows/e2e/issue_968_repro.sh http://localhost:8080 da expect-pass
 
