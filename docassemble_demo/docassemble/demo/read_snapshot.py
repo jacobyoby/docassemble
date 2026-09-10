@@ -7,7 +7,10 @@ __all__ = ['analyze']
 def analyze():
     with variables_snapshot_connect() as conn:
         with conn.connection.cursor() as cur:
-            cur.execute("select data->>'favorite_fruit' from jsonstorage where filename='" + current_context().filename + "'")
+            # NB: parameterized, never interpolated (M-16). The DBAPI cursor
+            # here is psycopg2 (pyformat %s style); the filename comes from
+            # the interview context and must not reach SQL as text.
+            cur.execute("select data->>'favorite_fruit' from jsonstorage where filename=%s", (current_context().filename,))
             counts = {}
             for record in cur.fetchall():
                 fruit = record[0].lower()
