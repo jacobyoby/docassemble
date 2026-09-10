@@ -150,7 +150,7 @@ def manage_api():
                 argu['constraints'] = info.get('constraints')
                 argu['display_key'] = ('*' * 28) + info.get('last_four')
         if ip_address != '127.0.0.1':
-            argu['description'] = Markup(word("Your IP address is") + " <code>" + str(ip_address) + "</code>.")
+            argu['description'] = Markup("{} <code>{}</code>.").format(word("Your IP address is"), str(ip_address))
     if action == 'list':
         argu['title'] = word("API Keys")
         argu['tab_title'] = argu['title']
