@@ -66,9 +66,9 @@ def get_flask_app():
         return FLASK_APP
     from flask import Flask
     from docassemble_flask_user import UserManager, SQLAlchemyAdapter
-    from docassemble.webapp.config import DEFAULT_SECRET_KEY
+    from docassemble.webapp.config import require_secret_key
     app = Flask('docassemble.webapp.app_object')
-    app.secret_key = daconfig.get('secretkey', DEFAULT_SECRET_KEY)
+    app.secret_key = require_secret_key()
     from docassemble.webapp.database import alchemy_connection_string
     app.config['SQLALCHEMY_DATABASE_URI'] = alchemy_connection_string()
     db.init_app(app)
@@ -219,7 +219,8 @@ def populate_tables(start_time=None):
     # if result.get('changed', False):
     #     session.commit()
     if 'api key' in admin_defaults:
-        api_result = add_specific_api_key('default', admin_defaults['api key'], admin_id, daconfig.get('secretkey', '38ihfiFehfoU34mcq_4clirglw3g4o87'))
+        from docassemble.webapp.config import require_secret_key
+        api_result = add_specific_api_key('default', admin_defaults['api key'], admin_id, require_secret_key())
         if api_result:
             logmessage("create_tables.populate_tables: added API key")
     with session_scope() as session:
