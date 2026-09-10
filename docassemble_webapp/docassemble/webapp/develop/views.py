@@ -41,7 +41,7 @@ from flask import (
 from flask_cors import cross_origin
 from flask_login import current_user
 from flask_wtf.csrf import generate_csrf
-from markupsafe import Markup
+from markupsafe import Markup, escape
 from pygments import highlight
 from pygments.formatters.html import HtmlFormatter
 from pygments.lexers import YamlLexer  # pylint: disable=no-name-in-module
@@ -148,7 +148,7 @@ from docassemble.webapp.packages.helpers import pypi_status
 from docassemble.webapp.utils.filenames import sanitize_arguments, secure_filename
 from docassemble.webapp.utils.hooks import url_for
 from docassemble.webapp.utils.logger import logmessage
-from docassemble.webapp.utils.path import splitall
+from docassemble.webapp.utils.path import splitall, zip_member_is_safe
 from docassemble.webapp.utils.redis_cred_storage import RedisCredStorage
 from .blueprint import develop_bp
 from .common import project_name, get_playground_user
@@ -181,7 +181,15 @@ from .helpers import (
     get_ssh_keys,
     pg_ex,
     set_playground_user,
+    write_git_ssh_script,
 )
+
+# NB: the Office add-in endpoints below previously used origins='*', which
+# overrode the global flask-cors allowlist from app_initialize.py. Honor the
+# admin-configured 'cross site domains' here too. The '*' fallback only
+# applies when the admin has configured no allowlist, preserving Office
+# add-in and dev behavior.
+CORS_ORIGINS = daconfig.get('cross site domains', '*')
 
 
 @develop_bp.route('/playground_poll', methods=['GET'])
@@ -1599,7 +1607,7 @@ def playground_download(current_project, userid, filename):
 
 
 @develop_bp.route('/officefunctionfile', methods=['GET', 'POST'])
-@cross_origin(origins='*', methods=['GET', 'POST', 'HEAD'], automatic_options=True)
+@cross_origin(origins=CORS_ORIGINS, methods=['GET', 'POST', 'HEAD'], automatic_options=True)
 def playground_office_functionfile():
     g.embed = True
     set_language(DEFAULT_LANGUAGE)
@@ -1612,7 +1620,7 @@ def playground_office_functionfile():
 
 
 @develop_bp.route('/officetaskpane', methods=['GET', 'POST'])
-@cross_origin(origins='*', methods=['GET', 'POST', 'HEAD'], automatic_options=True)
+@cross_origin(origins=CORS_ORIGINS, methods=['GET', 'POST', 'HEAD'], automatic_options=True)
 def playground_office_taskpane():
     g.embed = True
     set_language(DEFAULT_LANGUAGE)
@@ -1625,7 +1633,7 @@ def playground_office_taskpane():
 
 
 @develop_bp.route('/officeaddin', methods=['GET', 'POST'])
-@cross_origin(origins='*', methods=['GET', 'POST', 'HEAD'], automatic_options=True)
+@cross_origin(origins=CORS_ORIGINS, methods=['GET', 'POST', 'HEAD'], automatic_options=True)
 @login_required
 @roles_required(['developer', 'admin'])
 def playground_office_addin():
@@ -2206,13 +2214,9 @@ def do_playground_pull(area, current_project, github_url=None, branch=None, pypi
             (private_key_file, public_key_file) = get_ssh_keys(github_email)
             os.chmod(private_key_file, stat.S_IRUSR | stat.S_IWUSR)
             os.chmod(public_key_file, stat.S_IRUSR | stat.S_IWUSR)
-            ssh_script = tempfile.NamedTemporaryFile(mode='w', prefix="datemp", suffix='.sh', delete=False, encoding='utf-8')
-            ssh_script.write('# /bin/bash\n\nssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o GlobalKnownHostsFile=/dev/null -i "' + str(private_key_file) + '" $1 $2 $3 $4 $5 $6')
-            ssh_script.close()
-            os.chmod(ssh_script.name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
-            # git_prefix = "GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o GlobalKnownHostsFile=/dev/null -i \"" + str(private_key_file) + "\"' "
-            git_prefix = "GIT_SSH=" + ssh_script.name + " "
-            git_env = dict(os.environ, GIT_SSH=ssh_script.name)
+            ssh_script_name = write_git_ssh_script(private_key_file)
+            git_prefix = "GIT_SSH=" + ssh_script_name + " "
+            git_env = dict(os.environ, GIT_SSH=ssh_script_name)
             output += "Doing " + git_prefix + "git clone " + " ".join(branch_option) + github_url + "\n"
             try:
                 output += subprocess.check_output(["git", "clone"] + branch_option + [github_url], cwd=directory, stderr=subprocess.STDOUT, env=git_env).decode()
@@ -2624,9 +2628,9 @@ def playground_packages():
                 github_ssh = repo_info['ssh_url']
                 if repo_info['private']:
                     github_use_ssh = True
-                github_message = word('This package is') + ' <a target="_blank" href="' + repo_info.get('html_url', 'about:blank') + '">' + word("published on GitHub") + '</a>.'
+                github_message = Markup("{} {}.").format(word('This package is'), _github_link(repo_info.get('html_url', 'about:blank'), word("published on GitHub")))
                 if github_author_name:
-                    github_message += "  " + word("The author is") + " " + github_author_name + "."
+                    github_message = Markup("{}  {} {}.").format(Markup(github_message), word("The author is"), github_author_name)
                 branch_info = get_branch_info(http, repo_info['full_name'])
                 found = True
                 if github_url_from_file is None or github_url_from_file in [github_ssh, github_http]:
@@ -2642,7 +2646,7 @@ def playground_packages():
                     github_ssh = repo_info['ssh_url']
                     if repo_info['private']:
                         github_use_ssh = True
-                    github_message = word('This package is') + ' <a target="_blank" href="' + repo_info.get('html_url', 'about:blank') + '">' + word("published on GitHub") + '</a>.'
+                    github_message = Markup("{} {}.").format(word('This package is'), _github_link(repo_info.get('html_url', 'about:blank'), word("published on GitHub")))
                     branch_info = get_branch_info(http, repo_info['full_name'])
                     found = True
                     if github_url_from_file is None or github_url_from_file in [github_ssh, github_http]:
@@ -2660,7 +2664,7 @@ def playground_packages():
                         github_ssh = repo_info['ssh_url']
                         if repo_info['private']:
                             github_use_ssh = True
-                        github_message = word('This package is') + ' <a target="_blank" href="' + repo_info.get('html_url', 'about:blank') + '">' + word("published on GitHub") + '</a>.'
+                        github_message = Markup("{} {}.").format(word('This package is'), _github_link(repo_info.get('html_url', 'about:blank'), word("published on GitHub")))
                         branch_info = get_branch_info(http, repo_info['full_name'])
                         found = True
                         if github_url_from_file is None or github_url_from_file in [github_ssh, github_http]:
@@ -2686,6 +2690,10 @@ def playground_packages():
                 area_sec = {'templates': 'playgroundtemplate', 'static': 'playgroundstatic', 'sources': 'playgroundsources', 'questions': 'playground'}
                 zippath.close()
                 with zipfile.ZipFile(zippath.name, mode='r') as zf:
+                    for zinfo in zf.infolist():
+                        if not zip_member_is_safe(zinfo):
+                            flash(word("The zip file contained an unsafe file path."), 'error')
+                            return redirect(url_for('develop.playground_packages', project=current_project, file=the_file))
                     readme_text = ''
                     gitignore_text = ''
                     setup_py = ''
@@ -2859,12 +2867,17 @@ def playground_packages():
             else:
                 if pypi_info['exists'] and 'info' in pypi_info['info']:
                     pypi_version = pypi_info['info']['info'].get('version', None)
-                    pypi_message = word('This package is') + ' <a target="_blank" href="' + pypi_url + '/' + pkgname + '/' + pypi_version + '">' + word("published on PyPI") + '</a>.'
+                    # NB: pkgname derives from the playground filename and
+                    # version/author come from the remote PyPI JSON API, so all
+                    # three are untrusted inside this HTML. Build with
+                    # Markup.format (which escapes plain-str args) and the
+                    # _github_link helper, mirroring the GitHub message above.
+                    pypi_message = Markup("{} {}.").format(word('This package is'), _github_link(pypi_url + '/' + pkgname + '/' + str(pypi_version), word("published on PyPI")))
                     pypi_author = pypi_info['info']['info'].get('author', None)
                     if pypi_author:
-                        pypi_message += "  " + word("The author is") + " " + pypi_author + "."
+                        pypi_message = Markup("{}  {} {}.").format(Markup(pypi_message), word("The author is"), pypi_author)
                     if pypi_version != form['version'].data:
-                        pypi_message += "  " + word("The version on PyPI is") + " " + str(pypi_version) + ".  " + word("Your version is") + " " + str(form['version'].data) + "."
+                        pypi_message = Markup("{}  {} {}.  {} {}.").format(Markup(pypi_message), word("The version on PyPI is"), str(pypi_version), word("Your version is"), str(form['version'].data))
                 else:
                     pypi_message = word('This package is not yet published on PyPI.')
     if request.method == 'POST' and validated:
@@ -2969,7 +2982,7 @@ def playground_packages():
     else:
         the_pypi_package_name = None
     if github_message is not None and github_url_from_file is not None and github_url_from_file != github_http and github_url_from_file != github_ssh:
-        github_message += '  ' + word("This package was originally pulled from") + ' <a target="_blank" href="' + github_as_http(github_url_from_file) + '">' + word('a GitHub repository') + '</a>.'
+        github_message = Markup("{}  {} {}.").format(Markup(github_message), word("This package was originally pulled from"), _github_link(github_as_http(github_url_from_file), word('a GitHub repository')))
     if github_message is not None and old_info.get('github_branch', None) and (github_http or github_url_from_file):
         html_url = github_http or github_url_from_file
         commit_code = None
@@ -2985,9 +2998,14 @@ def playground_packages():
         else:
             commit_code_date = ''
         if commit_code:
-            github_message += '  ' + word('The current branch is %s and the current commit is %s.') % ('<a target="_blank" href="' + html_url + '/tree/' + old_info['github_branch'] + '">' + old_info['github_branch'] + '</a>', '<a target="_blank" href="' + html_url + '/commit/' + commit_code + '"><code>' + commit_code[0:7] + '</code></a>') + '  ' + word('The commit was saved locally at %s.') % commit_code_date
+            branch_link = Markup('<a target="_blank" href="') + escape(html_url) + Markup('/tree/') + escape(old_info['github_branch']) + Markup('">') + escape(old_info['github_branch']) + Markup('</a>')
+            commit_link = Markup('<a target="_blank" href="') + escape(html_url) + Markup('/commit/') + escape(commit_code) + Markup('"><code>') + escape(commit_code[0:7]) + Markup('</code></a>')
+            addition = Markup('  ' + word('The current branch is %s and the current commit is %s.') % (branch_link, commit_link) + '  ' + word('The commit was saved locally at %s.') % commit_code_date)
+            github_message = Markup("{}{}").format(Markup(github_message), addition)
         else:
-            github_message += '  ' + word('The current branch is %s.') % ('<a target="_blank" href="' + html_url + '/tree/' + old_info['github_branch'] + '">' + old_info['github_branch'] + '</a>',)
+            branch_link = Markup('<a target="_blank" href="') + escape(html_url) + Markup('/tree/') + escape(old_info['github_branch']) + Markup('">') + escape(old_info['github_branch']) + Markup('</a>')
+            addition = Markup('  ' + word('The current branch is %s.') % (branch_link,))
+            github_message = Markup("{}{}").format(Markup(github_message), addition)
     if github_message is not None:
         github_message = Markup(github_message)
     branch = old_info.get('github_branch', None)
@@ -3023,6 +3041,11 @@ def playground_packages():
     response = make_response(render_template('develop/playgroundpackages.html', current_project=current_project, branch=default_branch, version_warning=None, bodyclass='daadminbody', can_publish_to_pypi=can_publish_to_pypi, pypi_message=pypi_message, can_publish_to_github=can_publish_to_github, github_message=github_message, github_url=the_github_url, pypi_package_name=the_pypi_package_name, back_button=back_button, tab_title=header, page_title=header, extra_css=Markup('\n    <link href="' + url_for('static', filename='app/playgroundbundle.css', v=da_version) + '" rel="stylesheet">'), extra_js=Markup(extra_js), header=header, upload_header=upload_header, edit_header=edit_header, description=description, form=form, fileform=fileform, files=files, file_list=file_list, userid=playground_user.id, editable_files=sorted(editable_files, key=lambda y: y['name'].lower()), current_file=the_file, after_text=after_text, section_name=section_name, section_sec=section_sec, section_field=section_field, package_names=sorted(package_names, key=lambda y: y.lower()), any_files=any_files), 200)
     response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
     return response
+
+
+def _github_link(url, text):
+    """Anchor tag with URL and text escaped for Markup messages."""
+    return Markup('<a target="_blank" href="') + escape(url) + Markup('">') + escape(text) + Markup('</a>')
 
 
 def github_as_http(url):
@@ -4630,13 +4653,9 @@ def create_playground_package():
                 (private_key_file, public_key_file) = get_ssh_keys(github_email)
                 os.chmod(private_key_file, stat.S_IRUSR | stat.S_IWUSR)
                 os.chmod(public_key_file, stat.S_IRUSR | stat.S_IWUSR)
-                ssh_script = tempfile.NamedTemporaryFile(mode='w', prefix="datemp", suffix='.sh', delete=False, encoding='utf-8')
-                ssh_script.write('# /bin/bash\n\nssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o GlobalKnownHostsFile=/dev/null -i "' + str(private_key_file) + '" $1 $2 $3 $4 $5 $6')
-                ssh_script.close()
-                os.chmod(ssh_script.name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
-                # git_prefix = "GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o GlobalKnownHostsFile=/dev/null -i \"" + str(private_key_file) + "\"' "
-                git_prefix = "GIT_SSH=" + ssh_script.name + " "
-                git_env = dict(os.environ, GIT_SSH=ssh_script.name)
+                ssh_script_name = write_git_ssh_script(private_key_file)
+                git_prefix = "GIT_SSH=" + ssh_script_name + " "
+                git_env = dict(os.environ, GIT_SSH=ssh_script_name)
                 ssh_url = commit_repository.get('ssh_url', None)
                 # github_url = commit_repository.get('html_url', None)
                 commit_branch = commit_repository.get('default_branch', GITHUB_BRANCH)

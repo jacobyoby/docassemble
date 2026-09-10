@@ -467,6 +467,11 @@ class DetectIllegal(ast.NodeVisitor):
         self.illegal = True
         ast.NodeVisitor.generic_visit(self, node)
 
+    def visit_Attribute(self, node):
+        if node.attr.startswith('__') and node.attr.endswith('__'):
+            self.illegal = True
+        ast.NodeVisitor.generic_visit(self, node)
+
 
 class DetectIllegalQuery(ast.NodeVisitor):
 
@@ -670,4 +675,9 @@ class DetectIllegalQuery(ast.NodeVisitor):
 
     def visit_Starred(self, node):
         self.illegal = True
+        ast.NodeVisitor.generic_visit(self, node)
+
+    def visit_Attribute(self, node):
+        if node.attr.startswith('__') and node.attr.endswith('__'):
+            self.illegal = True
         ast.NodeVisitor.generic_visit(self, node)

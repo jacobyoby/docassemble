@@ -1,7 +1,7 @@
 import re
 import importlib
 from datetime import timedelta
-from docassemble.webapp.config import daconfig, DEFAULT_SECRET_KEY, da_version
+from docassemble.webapp.config import daconfig, require_secret_key, da_version
 from docassemble.webapp.database import alchemy_connection_string
 from .twilio.helpers import twilio_config
 
@@ -93,13 +93,17 @@ def init_app(app):
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000
     alchemy_connect_string = alchemy_connection_string()
     app.config['SQLALCHEMY_DATABASE_URI'] = alchemy_connect_string
-    app.secret_key = daconfig.get('secretkey', DEFAULT_SECRET_KEY)
+    app.secret_key = require_secret_key()
     app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
     app.config['ENABLE_MANAGE_ACCOUNT'] = daconfig.get('user can delete account', True)
     app.config['ENABLE_REQUEST_DEVELOPER_ACCOUNT'] = daconfig.get('user can request developer account', False)
     app.config['ENABLE_DELETE_SHARED'] = daconfig.get('delete account deletes shared', False)
     app.config['ENABLE_DELETE_ACCOUNT'] = daconfig.get('admin can delete account', True)
-    app.config['SESSION_COOKIE_SECURE'] = daconfig.get('use https', False) or daconfig.get('behind https load balancer', False)
+    # NB: Secure session cookies by default (M-8). Deliberately independent of
+    # 'use https', which also drives URL schemes and provisioning and defaults
+    # False for historical reasons. Only a plain-HTTP deployment opts out,
+    # explicitly: `secure cookies: false` in the server configuration.
+    app.config['SESSION_COOKIE_SECURE'] = daconfig.get('secure cookies', True)
     if daconfig.get('allow embedding', 'Lax') is True:
         app.config['SESSION_COOKIE_SAMESITE'] = 'None'
     elif daconfig.get('allow embedding', 'Lax') is False:

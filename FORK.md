@@ -90,6 +90,11 @@ Branch `jacob/maintained` is the working branch. It tracks
   safe schemes and same-origin hosts before issuing the `Location`
   header.
   CI: CodeQL advanced scan (`.github/workflows/codeql.yml`).
+- **PDF choice options**: editable fills preserve paired export/display
+  options and selection indices; a temporary display-label projection lets
+  QPDF render labels while the saved PDF retains its canonical export values.
+  The focused fail-first gate and bounded CN 11208 verification are described
+  in [the repair review](docs/pdf-choice-review.md).
 
 ## Test harness (`.github/workflows/`)
 

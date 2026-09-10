@@ -46,8 +46,8 @@ def main():
         db_user = 'docassemble'
     if db_password is None:
         db_password = os.getenv('DBPASSWORD', '')
-    if db_password == '':
-        db_password = 'abc123'
+    if not db_password or db_password == 'abc123':
+        sys.exit("fix_postgresql_tables: refusing to connect with a missing or default database password. Configure a db password or set the DBPASSWORD environment variable.")
     if db_port is None:
         db_port = os.getenv('DBPORT', '')
     if db_port == '':

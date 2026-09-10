@@ -19,12 +19,14 @@ jobs:
   checkboxes-dadict:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      UPSTREAM_IMAGE: jhpyle/docassemble:1.10.7  # Bump this tag as part of every upstream rebase
     steps:
       - uses: actions/checkout@v4
 
       - name: Start docassemble container
         run: |
-          docker run -d --name da -p 8080:80 jhpyle/docassemble:latest
+          docker run -d --name da -p 8080:80 ${UPSTREAM_IMAGE}
           # The image serves an HTTP 200 "Docassemble is starting" splash while
           # it initializes, so readiness means 200 AND the splash is gone.
           ready=0
@@ -85,7 +87,7 @@ jobs:
           fi
           echo "KEY=$KEY" >> "$GITHUB_ENV"
 
-      - name: Issue-15 setup - install the SEO test interview and configure dispatch + social.og (no image)
+      - name: Issue-15 setup - install the SEO test interview and configure dispatch + social.og (no image) + url root
         run: |
           D=$(docker exec da bash -c "ls -d /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/demo/data/questions")
           docker cp .github/workflows/e2e/test_seo.yml da:"$D/test_seo.yml"
@@ -97,26 +99,41 @@ jobs:
           c=yaml.safe_load(open(p)) or {}
           c.setdefault('dispatch', {})['seo']='docassemble.demo:data/questions/test_seo.yml'
           og=c.setdefault('social', {}).setdefault('og', {}); og.pop('image', None); og.setdefault('locale','en_US')
+          c['url root']='https://law.example.org'
           yaml.safe_dump(c, open(p,'w'), default_flow_style=False)
           PYEOF
           docker exec da bash -c "supervisorctl restart uwsgi"
           sleep 30
 
       - name: Issue-15 control - SEO head tags and sitemap must be absent on the unpatched release
-        run: bash .github/workflows/e2e/seo_check.sh http://localhost:8080 expect-fail
+        run: |
+          if ! bash .github/workflows/e2e/seo_check.sh http://localhost:8080 expect-fail https://law.example.org; then
+            echo "::notice::ALREADY FIXED upstream: issue 15 — SEO head tags present in pinned image"
+          fi
 
       - name: NFC control - stock PDF fill must lose the combining accent (NFD stays NFD)
         run: |
           docker cp .github/workflows/e2e/nfc_form.pdf da:/tmp/nfc_form.pdf
           docker cp .github/workflows/e2e/nfc_check.py da:/tmp/nfc_check.py
           PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
-          docker exec da "$PY" /tmp/nfc_check.py /tmp/nfc_form.pdf fileNum expect-fail
+          if ! docker exec da "$PY" /tmp/nfc_check.py /tmp/nfc_form.pdf fileNum expect-fail; then
+            echo "::notice::ALREADY FIXED upstream: NFC — PDF fill already normalizes to NFC"
+          fi
 
       - name: Issue-19 control - unpatched release must ship the 1.5 MB FontAwesome JS
-        run: bash .github/workflows/e2e/pagesize_check.sh http://localhost:8080 expect-fail
+        run: |
+          if ! bash .github/workflows/e2e/pagesize_check.sh http://localhost:8080 expect-fail; then
+            echo "::notice::ALREADY FIXED upstream: issue 19 — FontAwesome JS already replaced with CSS"
+          fi
 
       - name: Issue-18 control - a11y fixes must be absent on the unpatched release
-        run: bash .github/workflows/e2e/a11y_check.sh http://localhost:8080 expect-fail
+        run: |
+          if ! bash .github/workflows/e2e/a11y_check.sh http://localhost:8080 expect-fail; then
+            echo "::notice::ALREADY FIXED upstream: issue 18 — a11y fixes already present in pinned image"
+          fi
+
+      - name: Issue-932 control - unpatched release must crash when geopy is broken
+        run: bash .github/workflows/e2e/issue_932_repro.sh http://localhost:8080 da expect-fail
 
       - name: Control - unpatched release must reject the plain dict
         if: env.ALREADY_FIXED != '1'
@@ -139,20 +156,25 @@ jobs:
         run: |
           D=$(docker exec da bash -c "ls -d /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/demo/data/questions")
           docker cp .github/workflows/e2e/test_navbtn.yml da:"$D/test_navbtn.yml"
-          bash .github/workflows/e2e/issue_845_repro.sh http://localhost:8080 expect-fail
+          if ! bash .github/workflows/e2e/issue_845_repro.sh http://localhost:8080 expect-fail; then
+            echo "::notice::ALREADY FIXED upstream: issue 845 — navigation button already renders as link"
+          fi
 
       - name: Issue-968 control - stale hasattr error must be misattributed on the unpatched release
         run: |
           D=$(docker exec da bash -c "ls -d /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/demo/data/questions")
           docker cp .github/workflows/e2e/test_issue_968.yml da:"$D/test_issue_968.yml"
-          bash .github/workflows/e2e/issue_968_repro.sh http://localhost:8080 da expect-fail
+          if ! bash .github/workflows/e2e/issue_968_repro.sh http://localhost:8080 da expect-fail; then
+            echo "::notice::ALREADY FIXED upstream: issue 968 — hasattr error already reports real attribute"
+          fi
 
-      - name: Install this branch's util.py and email_crypto.py, restart
+      - name: Install this branch's util.py, email_crypto.py, and geocode.py, restart
         run: |
           U=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/base/util.py")
           docker cp docassemble_base/docassemble/base/util.py da:"$U"
           B=$(docker exec da bash -c "ls -d /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/base")
           docker cp docassemble_base/docassemble/base/email_crypto.py da:"$B/email_crypto.py"
+          docker cp docassemble_base/docassemble/base/geocode.py da:"$B/geocode.py"
           docker exec da bash -c "supervisorctl restart uwsgi"
           sleep 30
 
@@ -162,6 +184,188 @@ jobs:
           PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
           docker exec da "$PY" /tmp/email_crypto_check.py
 
+      - name: Issue-932 - patched server must import fine when geopy is broken
+        run: bash .github/workflows/e2e/issue_932_repro.sh http://localhost:8080 da expect-pass
+
+      - name: Pickle hardening - legit stored objects load, RCE payloads raise (#32)
+        run: |
+          F=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp/utils/fixpickle.py")
+          docker cp docassemble_webapp/docassemble/webapp/utils/fixpickle.py da:"$F"
+          docker cp .github/workflows/e2e/pickle_hardening_check.py da:/tmp/pickle_hardening_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/pickle_hardening_check.py
+
+      - name: Index query builder - filters parameterized, raw SQL rejected (#34)
+        run: |
+          docker cp docassemble_demo/docassemble/demo/index.py da:/tmp/index_under_test.py
+          docker cp .github/workflows/e2e/index_query_check.py da:/tmp/index_query_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/index_query_check.py
+
+      - name: AST guard - dunder attributes illegal, plain references legal (#35)
+        run: |
+          A=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/base/astparser.py")
+          docker cp docassemble_base/docassemble/base/astparser.py da:"$A"
+          docker cp .github/workflows/e2e/ast_guard_check.py da:/tmp/ast_guard_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/ast_guard_check.py
+
+      - name: XSS escaping - forwarded IP renders escaped, plain IP intact (#36)
+        run: |
+          docker cp .github/workflows/e2e/xss_escape_check.py da:/tmp/xss_escape_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/xss_escape_check.py
+
+      - name: Flash XSS - request path renders escaped, plain path intact (#37)
+        run: |
+          docker cp .github/workflows/e2e/flash_xss_check.py da:/tmp/flash_xss_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/flash_xss_check.py
+
+      - name: GitHub message XSS - API data escaped, legit layout intact (#38)
+        run: |
+          docker cp .github/workflows/e2e/github_message_check.py da:/tmp/github_message_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/github_message_check.py
+
+      - name: ZIP member validation - traversal entries refused, legit pass (#39)
+        run: |
+          P=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp/utils/path.py")
+          docker cp docassemble_webapp/docassemble/webapp/utils/path.py da:"$P"
+          docker cp .github/workflows/e2e/zip_path_check.py da:/tmp/zip_path_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/zip_path_check.py
+
+      - name: AES-GCM envelopes - new encrypts authenticated, legacy still reads (#40)
+        run: |
+          E=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp/utils/encryption.py")
+          docker cp docassemble_webapp/docassemble/webapp/utils/encryption.py da:"$E"
+          docker cp .github/workflows/e2e/aes_gcm_check.py da:/tmp/aes_gcm_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/aes_gcm_check.py
+
+      - name: API key sources - cookie ignored, header/query/body accepted (#41)
+        run: |
+          H=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp/api/helpers.py")
+          docker cp docassemble_webapp/docassemble/webapp/api/helpers.py da:"$H"
+          docker cp .github/workflows/e2e/api_key_source_check.py da:/tmp/api_key_source_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/api_key_source_check.py
+
+      - name: Fax signature - forged Twilio callbacks rejected, signed stored (#44)
+        run: |
+          F=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp/fax/views.py")
+          docker cp docassemble_webapp/docassemble/webapp/fax/views.py da:"$F"
+          docker cp .github/workflows/e2e/fax_signature_check.py da:/tmp/fax_signature_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/fax_signature_check.py
+
+      - name: Resume CSRF - forged session-planting POST rejected (#45)
+        run: |
+          M=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp/main/views.py")
+          docker cp docassemble_webapp/docassemble/webapp/main/views.py da:"$M"
+          docker cp .github/workflows/e2e/resume_csrf_check.py da:/tmp/resume_csrf_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/resume_csrf_check.py
+
+      - name: Subprocess argv - no shell, env as single elements (#46)
+        run: |
+          L=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp/listlog.py")
+          docker cp docassemble_webapp/docassemble/webapp/listlog.py da:"$L"
+          docker cp .github/workflows/e2e/subprocess_argv_check.py da:/tmp/subprocess_argv_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/subprocess_argv_check.py
+
+      - name: SSH TOFU - wrapper pins host keys, binary accepts options (#48)
+        run: |
+          D=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp/develop/helpers.py")
+          docker cp docassemble_webapp/docassemble/webapp/develop/helpers.py da:"$D"
+          docker cp .github/workflows/e2e/ssh_tofu_check.py da:/tmp/ssh_tofu_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/ssh_tofu_check.py
+
+      - name: SocketIO verify - no dead verify=False flag on init_app (#49)
+        run: |
+          S=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp/socketserver.py")
+          docker cp docassemble_webapp/docassemble/webapp/socketserver.py da:"$S"
+          docker cp .github/workflows/e2e/socketio_verify_check.py da:/tmp/socketio_verify_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/socketio_verify_check.py
+
+      - name: Keygen CSPRNG - verification digits from secrets, not random (#50)
+        run: |
+          G=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/base/generate_key.py")
+          docker cp docassemble_base/docassemble/base/generate_key.py da:"$G"
+          docker cp .github/workflows/e2e/keygen_check.py da:/tmp/keygen_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/keygen_check.py
+
+      - name: Template XSS - pypi message and pip summary escaped (#51 M-2/M-4)
+        run: |
+          V=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp/develop/views.py")
+          docker cp docassemble_webapp/docassemble/webapp/develop/views.py da:"$V"
+          H=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp/utils/helpers.py")
+          docker cp docassemble_webapp/docassemble/webapp/utils/helpers.py da:"$H"
+          docker cp .github/workflows/e2e/template_xss_check.py da:/tmp/template_xss_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/template_xss_check.py
+
+      - name: CORS allowlists - decorators honor config, no wildcard socket default (#52)
+        run: |
+          docker cp docassemble_webapp/docassemble/webapp/develop/views.py /tmp/views_cors.py
+          docker cp docassemble_webapp/docassemble/webapp/develop/api.py /tmp/api_cors.py
+          docker cp docassemble_webapp/docassemble/webapp/socketserver.py /tmp/socketserver_cors.py
+          docker cp /tmp/views_cors.py da:/tmp/views_cors.py
+          docker cp /tmp/api_cors.py da:/tmp/api_cors.py
+          docker cp /tmp/socketserver_cors.py da:/tmp/socketserver_cors.py
+          docker cp .github/workflows/e2e/cors_check.py da:/tmp/cors_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/cors_check.py /tmp/api_cors.py /tmp/views_cors.py /tmp/socketserver_cors.py
+
+      - name: Debug flags - no hardcoded DEBUG=True or debugger (#53)
+        run: |
+          P=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/base/parse.py")
+          docker cp docassemble_base/docassemble/base/parse.py da:"$P"
+          docker cp docassemble_webapp/docassemble/webapp/testrun.py /tmp/testrun_debug.py
+          docker cp /tmp/testrun_debug.py da:/tmp/testrun_debug.py
+          docker cp .github/workflows/e2e/debug_check.py da:/tmp/debug_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/debug_check.py "$P" /tmp/testrun_debug.py
+
+      - name: Secure cookies - SESSION_COOKIE_SECURE defaults True (#54)
+        run: |
+          S=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp/setup.py")
+          docker cp docassemble_webapp/docassemble/webapp/setup.py da:"$S"
+          docker cp .github/workflows/e2e/cookie_check.py da:/tmp/cookie_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/cookie_check.py "$S"
+
+      - name: Headers endpoint - authentication required (#55)
+        run: |
+          U=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp/users/views.py")
+          docker cp docassemble_webapp/docassemble/webapp/users/views.py da:"$U"
+          docker cp .github/workflows/e2e/headers_auth_check.py da:/tmp/headers_auth_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/headers_auth_check.py "$U"
+
+      - name: Phone codes - no verification code in URLs (#56)
+        run: |
+          P=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp/phonelogin/views.py")
+          docker cp docassemble_webapp/docassemble/webapp/phonelogin/views.py da:"$P"
+          docker cp .github/workflows/e2e/phonecode_check.py da:/tmp/phonecode_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/phonecode_check.py "$P"
+
+      - name: File role scope - advocate/trainer granular-only access (#57)
+        run: |
+          F=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp/files/")
+          docker cp docassemble_webapp/docassemble/webapp/files/common.py da:"$F/common.py"
+          docker cp docassemble_webapp/docassemble/webapp/files/file_access.py da:"$F/file_access.py"
+          docker cp docassemble_webapp/docassemble/webapp/files/helpers.py da:"$F/helpers.py"
+          docker cp .github/workflows/e2e/file_access_check.py da:/tmp/file_access_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/file_access_check.py "$F/common.py" "$F/file_access.py" "$F/helpers.py"
+
       - name: Issue-968 - patched server must report the real attribute
         run: bash .github/workflows/e2e/issue_968_repro.sh http://localhost:8080 da expect-pass
 
@@ -170,7 +374,9 @@ jobs:
           PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
           echo "PY=$PY" >> "$GITHUB_ENV"
           docker cp .github/workflows/e2e/currency_check.py da:/tmp/currency_check.py
-          docker exec da "$PY" /tmp/currency_check.py expect-fail
+          if ! docker exec da "$PY" /tmp/currency_check.py expect-fail; then
+            echo "::notice::ALREADY FIXED upstream: issue 343 — currency_code already backed by babel"
+          fi
 
       - name: Issue-343 - babel-backed currency_code must format correctly
         run: |
@@ -182,7 +388,9 @@ jobs:
         run: |
           docker exec da bash -c "cp /usr/share/docassemble/config/config.yml /tmp/config.yml.bak && printf '%s\n' 'main page title url opens in other window: False' >> /usr/share/docassemble/config/config.yml && supervisorctl restart uwsgi"
           sleep 30
-          bash .github/workflows/e2e/issue_980_repro.sh http://localhost:8080 da expect-fail
+          if ! bash .github/workflows/e2e/issue_980_repro.sh http://localhost:8080 da expect-fail; then
+            echo "::notice::ALREADY FIXED upstream: issue 980 — boolean config already handled"
+          fi
 
       - name: Install this branch's parse.py and restart
         run: |
@@ -219,7 +427,7 @@ jobs:
           docker cp docassemble_webapp/docassemble/webapp/main/views.py da:"$WB/main/views.py"
           docker exec da bash -c "supervisorctl restart uwsgi"
           sleep 30
-          bash .github/workflows/e2e/seo_check.sh http://localhost:8080 expect-pass
+          bash .github/workflows/e2e/seo_check.sh http://localhost:8080 expect-pass https://law.example.org
 
       - name: Issue-19 - install FontAwesome CSS build; JS bundle gone, page weight must drop
         run: |

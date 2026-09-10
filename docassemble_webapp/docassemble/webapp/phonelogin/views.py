@@ -26,7 +26,6 @@ from docassemble.webapp.sessions import update_session, get_session
 from docassemble.webapp.users.helpers import update_last_login
 from docassemble.webapp.users.models import UserModel
 from docassemble.webapp.utils.helpers import (
-    detect_mobile,
     get_requester_ip,
     MD5Hash,
     pad_to_16,
@@ -65,10 +64,11 @@ def phone_login():
                 flash(word("Your account has been disabled."), 'error')
                 return redirect(url_for('phonelogin.phone_login'))
             verification_code = random_digits(daconfig['verification code digits'])
+            # NB: the code travels by SMS only, never in a URL. An earlier
+            # revision appended a magic link (?p=&c=) for mobile users, but
+            # credentials in URLs leak via history, referers, and access logs.
+            # The code is entered into the form below, which POSTs it.
             message = word("Your verification code is") + " " + str(verification_code) + "."
-            user_agent = request.headers.get('User-Agent', '')
-            if detect_mobile.search(user_agent):
-                message += '  ' + word("You can also follow this link: ") + url_for('phonelogin.phone_login_verify', _external=True, p=phone_number, c=verification_code)
             tracker_prefix = 'da:phonelogin:ip:' + str(get_requester_ip(request)) + ':phone:'
             tracker_key = tracker_prefix + str(phone_number)
             pipe = r.pipeline()
@@ -112,17 +112,15 @@ def phone_login():
 def phone_login_verify():
     if not current_app.config['USE_PHONE_LOGIN']:
         return ('File not found', 404)
-    phone_number = session.get('phone_number', request.args.get('p', None))
+    # NB: the phone number comes from the server session set when the code was
+    # issued, never from URL parameters (M-10). The verification code arrives
+    # only in the POSTed form body, never via GET.
+    phone_number = session.get('phone_number', None)
     if phone_number is None:
         return ('File not found', 404)
     form = PhoneLoginVerifyForm(request.form)
     form.phone_number.data = phone_number
-    if 'c' in request.args and 'p' in request.args:
-        submitted = True
-        form.verification_code.data = request.args.get('c', None)
-    else:
-        submitted = False
-    if submitted or (request.method == 'POST' and form.submit.data):
+    if request.method == 'POST' and form.submit.data:
         if form.validate():
             social_id = 'phone$' + str(phone_number)
             user = db.session.execute(select(UserModel).options(db.joinedload(UserModel.roles)).filter_by(social_id=social_id)).scalar()

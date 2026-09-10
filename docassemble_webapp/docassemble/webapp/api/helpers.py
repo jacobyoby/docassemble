@@ -138,6 +138,11 @@ def update_api_key(user_id, api_key, name, method, allowed, add_to_allowed, remo
 
 
 def get_api_key():
+    # NOTE: cookies are deliberately NOT accepted here. Cookies are
+    # ambient credentials sent automatically by browsers, so honoring
+    # an API key from a cookie would turn every CSRF-exempt API route
+    # into a cross-site request forgery target. Query, body, and
+    # header keys must be known to the caller and are not ambient.
     api_key = request.args.get('key', None)
     if api_key is None and request.method in ('POST', 'PUT', 'PATCH'):
         post_data = request.get_json(silent=True)
@@ -145,8 +150,6 @@ def get_api_key():
             post_data = request.form.copy()
         if 'key' in post_data:
             api_key = post_data['key']
-    if api_key is None and 'X-API-Key' in request.cookies:
-        api_key = request.cookies['X-API-Key']
     if api_key is None and 'X-API-Key' in request.headers:
         api_key = request.headers['X-API-Key']
     if api_key is None and 'Authorization' in request.headers:

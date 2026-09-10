@@ -4,6 +4,7 @@ import sys
 import os
 import re
 import shutil
+import tempfile
 from pygments import highlight
 from pygments.formatters.html import HtmlFormatter
 from pygments.lexers import YamlLexer  # pylint: disable=no-name-in-module
@@ -278,6 +279,28 @@ def get_ssh_keys(email):
         area.write_content(pubkey_text, filename=public_key_file, save=False)
         area.finalize()
     return (private_key_file, public_key_file)
+
+
+def write_git_ssh_script(private_key_file):
+    """GIT_SSH wrapper with trust-on-first-use host key checking.
+
+    The previous wrapper passed StrictHostKeyChecking=no with
+    /dev/null known-hosts files, accepting any host key on every
+    connection. This version pins the first-seen host key in a
+    known_hosts file stored next to the private key (persistent
+    across restarts) and verifies it on subsequent connections
+    (StrictHostKeyChecking=accept-new).
+    """
+    known_hosts_file = os.path.join(os.path.dirname(private_key_file), '.ssh-known-hosts')
+    if not os.path.isfile(known_hosts_file):
+        with open(known_hosts_file, 'w', encoding='utf-8'):
+            pass
+        os.chmod(known_hosts_file, stat.S_IRUSR | stat.S_IWUSR)
+    ssh_script = tempfile.NamedTemporaryFile(mode='w', prefix="datemp", suffix='.sh', delete=False, encoding='utf-8')
+    ssh_script.write('# /bin/bash\n\nssh -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile="' + str(known_hosts_file) + '" -i "' + str(private_key_file) + '" $1 $2 $3 $4 $5 $6')
+    ssh_script.close()
+    os.chmod(ssh_script.name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
+    return ssh_script.name
 
 
 def make_necessary_dirs():

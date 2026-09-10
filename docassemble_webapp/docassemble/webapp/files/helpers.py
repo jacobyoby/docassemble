@@ -219,7 +219,7 @@ def do_serve_temporary_file(code, filename, extension, download=False):
 def do_serve_uploaded_file_with_filename_and_extension(number, filename, extension, download=False):
     filename = secure_filename_unicode_ok(filename)
     extension = werkzeug.utils.secure_filename(extension)
-    privileged = bool(current_user.is_authenticated and current_user.has_role('admin', 'advocate'))
+    privileged = bool(current_user.is_authenticated and current_user.has_role('admin'))
     number = re.sub(r'[^0-9]', '', str(number))
     if cloud is not None and daconfig.get('use cloud urls', False):
         if not (privileged or can_access_file_number(number, uids=get_session_uids())):
@@ -256,7 +256,7 @@ def do_serve_uploaded_file_with_filename_and_extension(number, filename, extensi
 
 def do_serve_uploaded_file_with_extension(number, extension, download=False):
     extension = werkzeug.utils.secure_filename(extension)
-    privileged = bool(current_user.is_authenticated and current_user.has_role('admin', 'advocate'))
+    privileged = bool(current_user.is_authenticated and current_user.has_role('admin'))
     number = re.sub(r'[^0-9]', '', str(number))
     if cloud is not None and daconfig.get('use cloud urls', False):
         if not can_access_file_number(number, uids=get_session_uids()):
@@ -283,7 +283,7 @@ def do_serve_uploaded_file_with_extension(number, extension, download=False):
 
 def do_serve_uploaded_file(number, download=False):
     number = re.sub(r'[^0-9]', '', str(number))
-    privileged = bool(current_user.is_authenticated and current_user.has_role('admin', 'advocate'))
+    privileged = bool(current_user.is_authenticated and current_user.has_role('admin'))
     try:
         file_info = get_info_from_file_number(number, privileged=privileged, uids=get_session_uids())
     except:
@@ -302,7 +302,7 @@ def do_serve_uploaded_file(number, download=False):
 def do_serve_uploaded_page(number, page, download=False, size='page'):
     number = re.sub(r'[^0-9]', '', str(number))
     page = re.sub(r'[^0-9]', '', str(page))
-    privileged = bool(current_user.is_authenticated and current_user.has_role('admin', 'advocate'))
+    privileged = bool(current_user.is_authenticated and current_user.has_role('admin'))
     try:
         file_info = get_info_from_file_number(number, privileged=privileged, uids=get_session_uids())
     except BaseException as err:

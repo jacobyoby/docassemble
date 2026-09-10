@@ -1,0 +1,47 @@
+name: PDF choice-field fill check
+
+# The control phase runs the test against the pinned upstream image before the
+# candidate module is loaded. This fails closed if the image already contains
+# the fix or the test stops exercising the bug.
+on:
+  push:
+    branches: [jacob/maintained]
+    paths:
+      - docassemble_base/docassemble/base/pdftk.py
+      - .github/workflows/e2e/pdf_choice_check.py
+      - .github/workflows/pdf-choice-fields.yml
+  pull_request:
+    branches: [jacob/maintained]
+    paths:
+      - docassemble_base/docassemble/base/pdftk.py
+      - .github/workflows/e2e/pdf_choice_check.py
+      - .github/workflows/pdf-choice-fields.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pdf-choice-fields:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify pinned Docassemble image metadata
+        run: docker manifest inspect jhpyle/docassemble:1.10.7 >/dev/null
+
+      - name: Fail-first control, then candidate module
+        run: |
+          docker run --rm --network none --name pdf-choice-fields \
+            --entrypoint bash \
+            -v "$GITHUB_WORKSPACE:/work:ro" \
+            jhpyle/docassemble:1.10.7 \
+            -lc '
+              set -euo pipefail
+              PY=$(ls -d /usr/share/docassemble/local*/bin/python3 | head -1)
+              test -n "$PY"
+              TEST=/work/.github/workflows/e2e/pdf_choice_check.py
+              "$PY" "$TEST" expect-fail
+              "$PY" "$TEST" expect-pass --module /work/docassemble_base/docassemble/base/pdftk.py
+            '
