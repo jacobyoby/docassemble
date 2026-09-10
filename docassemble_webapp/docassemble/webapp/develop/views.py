@@ -2860,12 +2860,17 @@ def playground_packages():
             else:
                 if pypi_info['exists'] and 'info' in pypi_info['info']:
                     pypi_version = pypi_info['info']['info'].get('version', None)
-                    pypi_message = word('This package is') + ' <a target="_blank" href="' + pypi_url + '/' + pkgname + '/' + pypi_version + '">' + word("published on PyPI") + '</a>.'
+                    # NB: pkgname derives from the playground filename and
+                    # version/author come from the remote PyPI JSON API, so all
+                    # three are untrusted inside this HTML. Build with
+                    # Markup.format (which escapes plain-str args) and the
+                    # _github_link helper, mirroring the GitHub message above.
+                    pypi_message = Markup("{} {}.").format(word('This package is'), _github_link(pypi_url + '/' + pkgname + '/' + str(pypi_version), word("published on PyPI")))
                     pypi_author = pypi_info['info']['info'].get('author', None)
                     if pypi_author:
-                        pypi_message += "  " + word("The author is") + " " + pypi_author + "."
+                        pypi_message = Markup("{}  {} {}.").format(Markup(pypi_message), word("The author is"), pypi_author)
                     if pypi_version != form['version'].data:
-                        pypi_message += "  " + word("The version on PyPI is") + " " + str(pypi_version) + ".  " + word("Your version is") + " " + str(form['version'].data) + "."
+                        pypi_message = Markup("{}  {} {}.  {} {}.").format(Markup(pypi_message), word("The version on PyPI is"), str(pypi_version), word("Your version is"), str(form['version'].data))
                 else:
                     pypi_message = word('This package is not yet published on PyPI.')
     if request.method == 'POST' and validated:
