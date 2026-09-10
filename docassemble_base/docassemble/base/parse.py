@@ -126,7 +126,10 @@ RangeType = type(range(1, 2))
 NoneType = type(None)
 standard_types = set(['integer', 'number', 'currency', 'float', 'file', 'files', 'range', 'multiselect', 'checkboxes', 'object_multiselect', 'object_checkboxes', 'user', 'camera', 'environment', 'date', 'datetime', 'time', 'email', 'microphone', 'ml', 'mlarea', 'noyes', 'noyesmaybe', 'noyesradio', 'noyeswide', 'yesno', 'yesnomaybe', 'yesnoradio', 'yesnowide', 'text', 'password', 'object'])
 
-DEBUG = True
+# NB: never True in shipped code. Nothing in-tree reads this flag today; it
+# exists so external code has a stable attribute, and it must stay False so
+# a stray `if DEBUG` can never enable debug output in production.
+DEBUG = False
 import_core = compile("from docassemble.base.util import objects_from_file, objects_from_structure", '<parse.py global>', 'exec')
 import_util = compile('from docassemble.base.util import *', '<parse.py global>', 'exec')
 import_process_action = compile('from docassemble.base.util import process_action', '<parse.py global>', 'exec')
