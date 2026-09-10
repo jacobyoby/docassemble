@@ -54,7 +54,13 @@ socketio = SocketIO()
 app = Flask(__name__)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.secret_key = require_secret_key()
-socketio.init_app(app, async_mode='gevent', verify=False, logger=True, engineio_logger=True, cors_allowed_origins=origins)
+# NB: no `verify` kwarg here. python-socketio's server accepts **kwargs and
+# silently ignores unknown ones, so a `verify=False` flag would disable
+# nothing while suggesting certificate verification is off. This process is
+# purely a server: it never makes outbound TLS connections, so there is no
+# client-side certificate check to enable. Browsers connecting to it verify
+# the server certificate themselves, and TLS terminates at the WSGI layer.
+socketio.init_app(app, async_mode='gevent', logger=True, engineio_logger=True, cors_allowed_origins=origins)
 server_context.set_context('websockets')
 KVSessionExtension().init_app(app, session_kvstore=RedisStore(r_store))
 
