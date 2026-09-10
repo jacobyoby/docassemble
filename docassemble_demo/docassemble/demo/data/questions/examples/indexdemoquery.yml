@@ -11,10 +11,13 @@ objects:
   - index: MyIndex
 ---
 mandatory: True
+code: |
+  from datetime import timedelta
+  month_ago_iso = (today() - timedelta(days=30)).isoformat()
 question: |
   People who have used the interview in the last month
 subquestion: |
-  % for data in index.report(filter_by="(data->>'start_time')::date > 'today'::date - '1 month'::interval", order_by="(data->>'start_time')::timestamp"):
+  % for data in index.report(filter_by=[("start_time", ">", month_ago_iso)], order_by=("start_time", "DESC")):
   * ${ data['first_name'] } ${ data['last_name'] }
     % if 'finish_time' not in data:
   (unfinished)
