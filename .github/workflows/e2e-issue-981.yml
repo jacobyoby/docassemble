@@ -406,6 +406,14 @@ jobs:
           PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
           docker exec da "$PY" /tmp/telnyx_signature_check.py
 
+      - name: CSRF audit - exemptions gated by API keys or documented (#41)
+        run: |
+          W=$(docker exec da bash -c "ls -d /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp")
+          docker cp docassemble_webapp/docassemble/webapp/react/api.py da:"$W/react/api.py"
+          docker cp .github/workflows/e2e/csrf_audit_check.py da:/tmp/csrf_audit_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/csrf_audit_check.py "$W"
+
       - name: Issue-968 - patched server must report the real attribute
         run: bash .github/workflows/e2e/issue_968_repro.sh http://localhost:8080 da expect-pass
 
