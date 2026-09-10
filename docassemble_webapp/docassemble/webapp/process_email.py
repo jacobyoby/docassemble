@@ -4,8 +4,10 @@ import datetime
 import email
 import json
 import mimetypes
+import os
 import re
 import sys
+import tempfile
 from email.utils import parseaddr, parsedate, getaddresses
 from time import mktime
 from sqlalchemy import select
@@ -21,11 +23,27 @@ from docassemble.webapp.users.models import UserModel
 from docassemble.webapp.tasks.app import celery_app
 
 
+def validated_email_path(argv, fp):
+    # NB: the sole in-repo invoker (Docker/process-email.sh) always passes a
+    # mktemp file holding piped stdin. Restrict reads to regular files
+    # directly inside the system temp directory so a mistyped or hostile
+    # invocation cannot point the reader at arbitrary paths (M-14).
+    # Returns the resolved path; exits nonzero otherwise.
+    if len(argv) < 2 or not argv[1]:
+        fp.write("No e-mail file argument was provided\n")
+        sys.exit("No e-mail file argument was provided")
+    resolved = os.path.realpath(argv[1])
+    if os.path.dirname(resolved) != os.path.realpath(tempfile.gettempdir()) or not os.path.isfile(resolved):
+        fp.write("Refusing to read e-mail from unexpected path\n")
+        sys.exit("Refusing to read e-mail from unexpected path")
+    return resolved
+
+
 def main():
     fp = open("/tmp/mail.log", "a", encoding="utf-8")
     # fp.write("The file is " + sys.argv[1] + "\n")
     try:
-        with open(sys.argv[1], 'r', encoding="utf-8") as email_fp:
+        with open(validated_email_path(sys.argv, fp), 'r', encoding="utf-8") as email_fp:
             msg = email.message_from_file(email_fp)
     except BaseException as err:
         fp.write("Failed to read e-mail message: " + str(err) + "\n")
@@ -149,4 +167,6 @@ def safe_filename(filename):
     filename = re.sub(r'[^A-Za-z0-9\_\-\. ]+', r'_', filename)
     return filename.strip('_')
 
-main()
+
+if __name__ == "__main__":
+    main()
