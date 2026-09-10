@@ -315,6 +315,14 @@ jobs:
           PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
           docker exec da "$PY" /tmp/cookie_check.py "$S"
 
+      - name: Headers endpoint - authentication required (#55)
+        run: |
+          U=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp/users/views.py")
+          docker cp docassemble_webapp/docassemble/webapp/users/views.py da:"$U"
+          docker cp .github/workflows/e2e/headers_auth_check.py da:/tmp/headers_auth_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/headers_auth_check.py "$U"
+
       - name: Issue-968 - patched server must report the real attribute
         run: bash .github/workflows/e2e/issue_968_repro.sh http://localhost:8080 da expect-pass
 
