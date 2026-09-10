@@ -275,6 +275,16 @@ jobs:
           PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
           docker exec da "$PY" /tmp/keygen_check.py
 
+      - name: Template XSS - pypi message and pip summary escaped (#51 M-2/M-4)
+        run: |
+          V=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp/develop/views.py")
+          docker cp docassemble_webapp/docassemble/webapp/develop/views.py da:"$V"
+          H=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp/utils/helpers.py")
+          docker cp docassemble_webapp/docassemble/webapp/utils/helpers.py da:"$H"
+          docker cp .github/workflows/e2e/template_xss_check.py da:/tmp/template_xss_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/template_xss_check.py
+
       - name: Issue-968 - patched server must report the real attribute
         run: bash .github/workflows/e2e/issue_968_repro.sh http://localhost:8080 da expect-pass
 
