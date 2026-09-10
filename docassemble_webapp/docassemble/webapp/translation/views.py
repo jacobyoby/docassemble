@@ -114,7 +114,7 @@ def translation_file():
                                         tr_text += mrk.tail
                             if orig_text == '' or tr_text == '':
                                 continue
-                            the_dict = {'interview': source_filename, 'question_id': 'Unknown' + str(indexno), 'index_num': transunit.attrib.get('id', str(indexno)), 'hash': hashlib.md5(orig_text.encode('utf-8')).hexdigest(), 'orig_lang': source_lang, 'tr_lang': target_lang, 'orig_text': orig_text, 'tr_text': tr_text}
+                            the_dict = {'interview': source_filename, 'question_id': 'Unknown' + str(indexno), 'index_num': transunit.attrib.get('id', str(indexno)), 'hash': hashlib.sha256(orig_text.encode('utf-8')).hexdigest(), 'orig_lang': source_lang, 'tr_lang': target_lang, 'orig_text': orig_text, 'tr_text': tr_text}
                             if orig_text not in tr_cache:
                                 tr_cache[orig_text] = {}
                             if source_lang not in tr_cache[orig_text]:
@@ -147,7 +147,7 @@ def translation_file():
                                             tr_text += mrk.tail
                                 if orig_text == '' or tr_text == '':
                                     continue
-                                the_dict = {'interview': source_filename, 'question_id': question_id, 'index_num': segment.attrib.get('id', str(indexno)), 'hash': hashlib.md5(orig_text.encode('utf-8')).hexdigest(), 'orig_lang': source_lang, 'tr_lang': target_lang, 'orig_text': orig_text, 'tr_text': tr_text}
+                                the_dict = {'interview': source_filename, 'question_id': question_id, 'index_num': segment.attrib.get('id', str(indexno)), 'hash': hashlib.sha256(orig_text.encode('utf-8')).hexdigest(), 'orig_lang': source_lang, 'tr_lang': target_lang, 'orig_text': orig_text, 'tr_text': tr_text}
                                 if orig_text not in tr_cache:
                                     tr_cache[orig_text] = {}
                                 if source_lang not in tr_cache[orig_text]:
@@ -272,7 +272,7 @@ def translation_file():
                 worksheet.write_string(row, 0, question.from_source.get_name(), text)
                 worksheet.write_string(row, 1, question_id, text)
                 worksheet.write_number(row, 2, indexno, numb)
-                worksheet.write_string(row, 3, hashlib.md5(item.encode('utf-8')).hexdigest(), text)
+                worksheet.write_string(row, 3, hashlib.sha256(item.encode('utf-8')).hexdigest(), text)
                 worksheet.write_string(row, 4, language, text)
                 worksheet.write_string(row, 5, tr_lang, text)
                 mako = mako_parts(item)
