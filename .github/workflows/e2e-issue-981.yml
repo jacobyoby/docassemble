@@ -162,6 +162,14 @@ jobs:
           PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
           docker exec da "$PY" /tmp/email_crypto_check.py
 
+      - name: Pickle hardening - legit stored objects load, RCE payloads raise (#32)
+        run: |
+          F=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp/utils/fixpickle.py")
+          docker cp docassemble_webapp/docassemble/webapp/utils/fixpickle.py da:"$F"
+          docker cp .github/workflows/e2e/pickle_hardening_check.py da:/tmp/pickle_hardening_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/pickle_hardening_check.py
+
       - name: Issue-968 - patched server must report the real attribute
         run: bash .github/workflows/e2e/issue_968_repro.sh http://localhost:8080 da expect-pass
 
