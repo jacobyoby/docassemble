@@ -33,7 +33,14 @@ from docassemble.webapp.utils.helpers import (
 )
 from docassemble.webapp.utils.logger import logmessage
 from docassemble.webapp.utils.path import splitall, zip_member_is_safe
+from docassemble.webapp.config import daconfig
 from .common import project_name
+
+# NB: these endpoints previously used origins='*', which overrode the global
+# flask-cors allowlist from app_initialize.py. Honor the admin-configured
+# 'cross site domains' here too. The '*' fallback only applies when the admin
+# has configured no allowlist, preserving Office add-in and dev behavior.
+CORS_ORIGINS = daconfig.get('cross site domains', '*')
 from .views import (
     delete_project,
     create_project,
@@ -44,7 +51,7 @@ from .views import (
 
 @develop_bp.route('/api/playground_pull', methods=['GET', 'POST'])
 @csrf.exempt
-@cross_origin(origins='*', methods=['POST', 'HEAD'], automatic_options=True)
+@cross_origin(origins=CORS_ORIGINS, methods=['POST', 'HEAD'], automatic_options=True)
 def api_playground_pull():
     if not current_app.config['ENABLE_PLAYGROUND']:
         return ('File not found', 404)
@@ -119,7 +126,7 @@ def api_playground_pull():
 
 @develop_bp.route('/api/playground_install', methods=['POST'])
 @csrf.exempt
-@cross_origin(origins='*', methods=['POST', 'HEAD'], automatic_options=True)
+@cross_origin(origins=CORS_ORIGINS, methods=['POST', 'HEAD'], automatic_options=True)
 def api_playground_install():
     if not current_app.config['ENABLE_PLAYGROUND']:
         return ('File not found', 404)
@@ -293,7 +300,7 @@ def api_playground_install():
 
 @develop_bp.route('/api/playground/project', methods=['GET', 'POST', 'DELETE'])
 @csrf.exempt
-@cross_origin(origins='*', methods=['GET', 'POST', 'DELETE', 'HEAD'], automatic_options=True)
+@cross_origin(origins=CORS_ORIGINS, methods=['GET', 'POST', 'DELETE', 'HEAD'], automatic_options=True)
 def api_playground_projects():
     if not current_app.config['ENABLE_PLAYGROUND']:
         return ('File not found', 404)
@@ -347,7 +354,7 @@ def api_playground_projects():
 
 @develop_bp.route('/api/playground', methods=['GET', 'POST', 'DELETE'])
 @csrf.exempt
-@cross_origin(origins='*', methods=['GET', 'POST', 'DELETE', 'HEAD'], automatic_options=True)
+@cross_origin(origins=CORS_ORIGINS, methods=['GET', 'POST', 'DELETE', 'HEAD'], automatic_options=True)
 def api_playground():
     if not current_app.config['ENABLE_PLAYGROUND']:
         return ('File not found', 404)

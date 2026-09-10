@@ -38,8 +38,14 @@ from docassemble.webapp.utils.helpers import decode_dict, nice_utc_date, get_ses
 
 if 'cross site domains' in daconfig and isinstance(daconfig['cross site domains'], list) and len(daconfig['cross site domains']) > 0:
     origins = daconfig['cross site domains']
+elif daconfig.get('url root'):
+    origins = [daconfig['url root']]
 else:
-    origins = [daconfig.get('url root', '*')]
+    # NB: no allowlist and no url root. Pass None so engine.io enforces
+    # same-origin from the request Host headers instead of a wildcard.
+    # (An empty list would skip origin validation entirely, and a star
+    # entry would allow all origins.)
+    origins = None
 
 alchemy_connect_string = alchemy_connection_string()
 if alchemy_connect_string.startswith('postgresql'):

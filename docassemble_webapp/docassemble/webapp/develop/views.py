@@ -184,6 +184,13 @@ from .helpers import (
     write_git_ssh_script,
 )
 
+# NB: the Office add-in endpoints below previously used origins='*', which
+# overrode the global flask-cors allowlist from app_initialize.py. Honor the
+# admin-configured 'cross site domains' here too. The '*' fallback only
+# applies when the admin has configured no allowlist, preserving Office
+# add-in and dev behavior.
+CORS_ORIGINS = daconfig.get('cross site domains', '*')
+
 
 @develop_bp.route('/playground_poll', methods=['GET'])
 @login_required
@@ -1600,7 +1607,7 @@ def playground_download(current_project, userid, filename):
 
 
 @develop_bp.route('/officefunctionfile', methods=['GET', 'POST'])
-@cross_origin(origins='*', methods=['GET', 'POST', 'HEAD'], automatic_options=True)
+@cross_origin(origins=CORS_ORIGINS, methods=['GET', 'POST', 'HEAD'], automatic_options=True)
 def playground_office_functionfile():
     g.embed = True
     set_language(DEFAULT_LANGUAGE)
@@ -1613,7 +1620,7 @@ def playground_office_functionfile():
 
 
 @develop_bp.route('/officetaskpane', methods=['GET', 'POST'])
-@cross_origin(origins='*', methods=['GET', 'POST', 'HEAD'], automatic_options=True)
+@cross_origin(origins=CORS_ORIGINS, methods=['GET', 'POST', 'HEAD'], automatic_options=True)
 def playground_office_taskpane():
     g.embed = True
     set_language(DEFAULT_LANGUAGE)
@@ -1626,7 +1633,7 @@ def playground_office_taskpane():
 
 
 @develop_bp.route('/officeaddin', methods=['GET', 'POST'])
-@cross_origin(origins='*', methods=['GET', 'POST', 'HEAD'], automatic_options=True)
+@cross_origin(origins=CORS_ORIGINS, methods=['GET', 'POST', 'HEAD'], automatic_options=True)
 @login_required
 @roles_required(['developer', 'admin'])
 def playground_office_addin():

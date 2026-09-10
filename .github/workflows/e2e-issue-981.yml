@@ -285,6 +285,18 @@ jobs:
           PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
           docker exec da "$PY" /tmp/template_xss_check.py
 
+      - name: CORS allowlists - decorators honor config, no wildcard socket default (#52)
+        run: |
+          docker cp docassemble_webapp/docassemble/webapp/develop/views.py /tmp/views_cors.py
+          docker cp docassemble_webapp/docassemble/webapp/develop/api.py /tmp/api_cors.py
+          docker cp docassemble_webapp/docassemble/webapp/socketserver.py /tmp/socketserver_cors.py
+          docker cp /tmp/views_cors.py da:/tmp/views_cors.py
+          docker cp /tmp/api_cors.py da:/tmp/api_cors.py
+          docker cp /tmp/socketserver_cors.py da:/tmp/socketserver_cors.py
+          docker cp .github/workflows/e2e/cors_check.py da:/tmp/cors_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/cors_check.py /tmp/api_cors.py /tmp/views_cors.py /tmp/socketserver_cors.py
+
       - name: Issue-968 - patched server must report the real attribute
         run: bash .github/workflows/e2e/issue_968_repro.sh http://localhost:8080 da expect-pass
 
