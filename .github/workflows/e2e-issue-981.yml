@@ -87,7 +87,7 @@ jobs:
           fi
           echo "KEY=$KEY" >> "$GITHUB_ENV"
 
-      - name: Issue-15 setup - install the SEO test interview and configure dispatch + social.og (no image)
+      - name: Issue-15 setup - install the SEO test interview and configure dispatch + social.og (no image) + url root
         run: |
           D=$(docker exec da bash -c "ls -d /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/demo/data/questions")
           docker cp .github/workflows/e2e/test_seo.yml da:"$D/test_seo.yml"
@@ -99,6 +99,7 @@ jobs:
           c=yaml.safe_load(open(p)) or {}
           c.setdefault('dispatch', {})['seo']='docassemble.demo:data/questions/test_seo.yml'
           og=c.setdefault('social', {}).setdefault('og', {}); og.pop('image', None); og.setdefault('locale','en_US')
+          c['url root']='https://law.example.org'
           yaml.safe_dump(c, open(p,'w'), default_flow_style=False)
           PYEOF
           docker exec da bash -c "supervisorctl restart uwsgi"
@@ -106,7 +107,7 @@ jobs:
 
       - name: Issue-15 control - SEO head tags and sitemap must be absent on the unpatched release
         run: |
-          if ! bash .github/workflows/e2e/seo_check.sh http://localhost:8080 expect-fail; then
+          if ! bash .github/workflows/e2e/seo_check.sh http://localhost:8080 expect-fail https://law.example.org; then
             echo "::notice::ALREADY FIXED upstream: issue 15 — SEO head tags present in pinned image"
           fi
 
@@ -130,6 +131,9 @@ jobs:
           if ! bash .github/workflows/e2e/a11y_check.sh http://localhost:8080 expect-fail; then
             echo "::notice::ALREADY FIXED upstream: issue 18 — a11y fixes already present in pinned image"
           fi
+
+      - name: Issue-932 control - unpatched release must crash when geopy is broken
+        run: bash .github/workflows/e2e/issue_932_repro.sh http://localhost:8080 da expect-fail
 
       - name: Control - unpatched release must reject the plain dict
         if: env.ALREADY_FIXED != '1'
@@ -164,12 +168,13 @@ jobs:
             echo "::notice::ALREADY FIXED upstream: issue 968 — hasattr error already reports real attribute"
           fi
 
-      - name: Install this branch's util.py and email_crypto.py, restart
+      - name: Install this branch's util.py, email_crypto.py, and geocode.py, restart
         run: |
           U=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/base/util.py")
           docker cp docassemble_base/docassemble/base/util.py da:"$U"
           B=$(docker exec da bash -c "ls -d /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/base")
           docker cp docassemble_base/docassemble/base/email_crypto.py da:"$B/email_crypto.py"
+          docker cp docassemble_base/docassemble/base/geocode.py da:"$B/geocode.py"
           docker exec da bash -c "supervisorctl restart uwsgi"
           sleep 30
 
@@ -178,6 +183,9 @@ jobs:
           docker cp .github/workflows/e2e/email_crypto_check.py da:/tmp/email_crypto_check.py
           PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
           docker exec da "$PY" /tmp/email_crypto_check.py
+
+      - name: Issue-932 - patched server must import fine when geopy is broken
+        run: bash .github/workflows/e2e/issue_932_repro.sh http://localhost:8080 da expect-pass
 
       - name: Pickle hardening - legit stored objects load, RCE payloads raise (#32)
         run: |
@@ -419,7 +427,7 @@ jobs:
           docker cp docassemble_webapp/docassemble/webapp/main/views.py da:"$WB/main/views.py"
           docker exec da bash -c "supervisorctl restart uwsgi"
           sleep 30
-          bash .github/workflows/e2e/seo_check.sh http://localhost:8080 expect-pass
+          bash .github/workflows/e2e/seo_check.sh http://localhost:8080 expect-pass https://law.example.org
 
       - name: Issue-19 - install FontAwesome CSS build; JS bundle gone, page weight must drop
         run: |

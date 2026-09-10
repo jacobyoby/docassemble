@@ -413,7 +413,16 @@ def favicon_browserconfig():
 def sitemap():
     """List the public, listed dispatch interviews so search engines can
     find every court form without crawling for them. Unlisted interviews
-    and anything not in `dispatch` are omitted."""
+    and anything not in `dispatch` are omitted.
+
+    Returns 404 when `url root` is not configured in the server config.
+    Sitemaps require absolute URLs per the sitemaps.org protocol; emitting
+    relative paths would produce an invalid sitemap that search engines
+    would reject. Returning 404 (rather than 500) signals that the sitemap
+    is intentionally unavailable, not broken."""
+    url_root = daconfig.get('url root', '').rstrip('/')
+    if not url_root:
+        return ('Sitemap unavailable: url root not configured', 404)
     urls = []
     for key, yaml_filename in sorted(daconfig.get('dispatch', {}).items()):
         try:
@@ -424,7 +433,7 @@ def sitemap():
             continue
         # Built from url root, not the request scheme/host, so a plain-http hop
         # behind a TLS-terminating proxy cannot emit http:// entries.
-        urls.append(daconfig.get('url root', '').rstrip('/') + url_for('interview.redirect_to_interview', dispatch=key))
+        urls.append(url_root + url_for('interview.redirect_to_interview', dispatch=key))
     body = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
     for url in urls:
         body += '  <url><loc>' + url.replace('&', '&amp;') + '</loc></url>\n'
