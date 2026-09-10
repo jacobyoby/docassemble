@@ -10,7 +10,6 @@ loading; classic RCE payloads must raise instead of executing.
 """
 import datetime
 import pickle
-import sys
 
 from docassemble.webapp.utils.fixpickle import fix_pickle_obj, fix_pickle_dict
 
