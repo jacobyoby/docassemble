@@ -246,7 +246,9 @@ def add_info_about_file(filename, basename, result):
 
 
 def get_info_from_file_number(file_number, privileged=False, filename=None, uids=None):
-    if current_user and current_user.is_authenticated and current_user.has_role('admin', 'developer', 'advocate', 'trainer'):
+    # NB: least privilege (M-11), mirroring can_access_file_number.
+    # Advocates and trainers use the granular grants below, not a blanket.
+    if current_user and current_user.is_authenticated and current_user.has_role('admin', 'developer'):
         privileged = True
     elif uids is None or len(uids) == 0:
         new_uid = get_uid()
