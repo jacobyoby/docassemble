@@ -251,6 +251,14 @@ jobs:
           PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
           docker exec da "$PY" /tmp/subprocess_argv_check.py
 
+      - name: SSH TOFU - wrapper pins host keys, binary accepts options (#48)
+        run: |
+          D=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp/develop/helpers.py")
+          docker cp docassemble_webapp/docassemble/webapp/develop/helpers.py da:"$D"
+          docker cp .github/workflows/e2e/ssh_tofu_check.py da:/tmp/ssh_tofu_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/ssh_tofu_check.py
+
       - name: Issue-968 - patched server must report the real attribute
         run: bash .github/workflows/e2e/issue_968_repro.sh http://localhost:8080 da expect-pass
 

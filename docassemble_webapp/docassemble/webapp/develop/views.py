@@ -181,6 +181,7 @@ from .helpers import (
     get_ssh_keys,
     pg_ex,
     set_playground_user,
+    write_git_ssh_script,
 )
 
 
@@ -2206,13 +2207,9 @@ def do_playground_pull(area, current_project, github_url=None, branch=None, pypi
             (private_key_file, public_key_file) = get_ssh_keys(github_email)
             os.chmod(private_key_file, stat.S_IRUSR | stat.S_IWUSR)
             os.chmod(public_key_file, stat.S_IRUSR | stat.S_IWUSR)
-            ssh_script = tempfile.NamedTemporaryFile(mode='w', prefix="datemp", suffix='.sh', delete=False, encoding='utf-8')
-            ssh_script.write('# /bin/bash\n\nssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o GlobalKnownHostsFile=/dev/null -i "' + str(private_key_file) + '" $1 $2 $3 $4 $5 $6')
-            ssh_script.close()
-            os.chmod(ssh_script.name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
-            # git_prefix = "GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o GlobalKnownHostsFile=/dev/null -i \"" + str(private_key_file) + "\"' "
-            git_prefix = "GIT_SSH=" + ssh_script.name + " "
-            git_env = dict(os.environ, GIT_SSH=ssh_script.name)
+            ssh_script_name = write_git_ssh_script(private_key_file)
+            git_prefix = "GIT_SSH=" + ssh_script_name + " "
+            git_env = dict(os.environ, GIT_SSH=ssh_script_name)
             output += "Doing " + git_prefix + "git clone " + " ".join(branch_option) + github_url + "\n"
             try:
                 output += subprocess.check_output(["git", "clone"] + branch_option + [github_url], cwd=directory, stderr=subprocess.STDOUT, env=git_env).decode()
@@ -4644,13 +4641,9 @@ def create_playground_package():
                 (private_key_file, public_key_file) = get_ssh_keys(github_email)
                 os.chmod(private_key_file, stat.S_IRUSR | stat.S_IWUSR)
                 os.chmod(public_key_file, stat.S_IRUSR | stat.S_IWUSR)
-                ssh_script = tempfile.NamedTemporaryFile(mode='w', prefix="datemp", suffix='.sh', delete=False, encoding='utf-8')
-                ssh_script.write('# /bin/bash\n\nssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o GlobalKnownHostsFile=/dev/null -i "' + str(private_key_file) + '" $1 $2 $3 $4 $5 $6')
-                ssh_script.close()
-                os.chmod(ssh_script.name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
-                # git_prefix = "GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o GlobalKnownHostsFile=/dev/null -i \"" + str(private_key_file) + "\"' "
-                git_prefix = "GIT_SSH=" + ssh_script.name + " "
-                git_env = dict(os.environ, GIT_SSH=ssh_script.name)
+                ssh_script_name = write_git_ssh_script(private_key_file)
+                git_prefix = "GIT_SSH=" + ssh_script_name + " "
+                git_env = dict(os.environ, GIT_SSH=ssh_script_name)
                 ssh_url = commit_repository.get('ssh_url', None)
                 # github_url = commit_repository.get('html_url', None)
                 commit_branch = commit_repository.get('default_branch', GITHUB_BRANCH)
