@@ -1,5 +1,10 @@
+import base64
+import binascii
 import hmac
 import json
+import time
+from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from flask import request, Blueprint, Response
 from twilio.request_validator import RequestValidator
 from docassemble.webapp.daredis import r
@@ -91,12 +96,53 @@ def clicksend_fax_callback():
     return ('', 204)
 
 
+# Seconds a Telnyx webhook timestamp may differ from server time. Matches
+# the tolerance in Telnyx's own SDKs; blocks replayed callbacks.
+TELNYX_SIGNATURE_TOLERANCE = 300
+
+
+def telnyx_signature_ok():
+    # NB: Telnyx signs `{timestamp}|{raw body}` with Ed25519 and sends the
+    # base64 signature plus unix timestamp in headers. The public key comes
+    # from the Telnyx portal and is configured per account as 'public key'
+    # inside the server's telnyx entries. The send-side record carries no
+    # config name, so a signature from ANY configured key is accepted.
+    signature = request.headers.get('telnyx-signature-ed25519', '')
+    timestamp = request.headers.get('telnyx-timestamp', '')
+    if not signature or not timestamp:
+        return False
+    try:
+        sent_at = int(timestamp)
+    except (TypeError, ValueError):
+        return False
+    if abs(time.time() - sent_at) > TELNYX_SIGNATURE_TOLERANCE:
+        return False
+    try:
+        sig_bytes = base64.b64decode(signature)
+    except (binascii.Error, ValueError):
+        return False
+    signed = timestamp.encode('utf-8') + b'|' + request.get_data()
+    for config_info in telnyx_config['name'].values():
+        key_b64 = config_info.get('public key')
+        if not key_b64:
+            continue
+        try:
+            Ed25519PublicKey.from_public_bytes(base64.b64decode(key_b64)).verify(sig_bytes, signed)
+            return True
+        except (InvalidSignature, ValueError, binascii.Error):
+            continue
+    return False
+
+
 @fax_bp.route("/telnyx_fax_callback", methods=['POST'])
 @csrf.exempt
 def telnyx_fax_callback():
     if telnyx_config is None:
         logmessage("telnyx_fax_callback: Telnyx not enabled")
         return ('', 204)
+    if not telnyx_signature_ok():
+        logmessage("telnyx_fax_callback: invalid webhook signature")
+        return Response('', status=403)
     data = request.get_json(silent=True)
     try:
         the_id = data['data']['payload']['fax_id']

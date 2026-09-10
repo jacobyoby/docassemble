@@ -398,6 +398,14 @@ jobs:
           PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
           docker exec da "$PY" /tmp/clicksend_auth_check.py
 
+      - name: Telnyx fax signature - Ed25519 webhooks verified (#83)
+        run: |
+          C=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp/fax/views.py")
+          docker cp docassemble_webapp/docassemble/webapp/fax/views.py da:"$C"
+          docker cp .github/workflows/e2e/telnyx_signature_check.py da:/tmp/telnyx_signature_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/telnyx_signature_check.py
+
       - name: Issue-968 - patched server must report the real attribute
         run: bash .github/workflows/e2e/issue_968_repro.sh http://localhost:8080 da expect-pass
 
