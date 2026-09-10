@@ -1,7 +1,7 @@
 import string
 import random
+import secrets
 import sys
-import math
 
 __all__ = ['random_string', 'random_alphanumeric']
 
@@ -25,8 +25,12 @@ def random_alphanumeric(length):
 
 
 def random_digits(num):
-    the_string = ("%0" + str(num) + "d") % int(random.random()*math.pow(10, int(num)))
-    return the_string[0:int(num)]
+    # NB: secrets, not random.random(). random_digits() backs phone and e-mail
+    # verification codes, so the digits must come from a CSPRNG. The rest of
+    # this module already uses random.SystemRandom (os.urandom-backed); only
+    # this function used the predictable Mersenne Twister global PRNG.
+    length = int(num)
+    return ''.join(secrets.choice(string.digits) for _ in range(length))
 
 if __name__ == "__main__":
     sys.stdout.write(random_string(32))

@@ -267,6 +267,14 @@ jobs:
           PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
           docker exec da "$PY" /tmp/socketio_verify_check.py
 
+      - name: Keygen CSPRNG - verification digits from secrets, not random (#50)
+        run: |
+          G=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/base/generate_key.py")
+          docker cp docassemble_base/docassemble/base/generate_key.py da:"$G"
+          docker cp .github/workflows/e2e/keygen_check.py da:/tmp/keygen_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/keygen_check.py
+
       - name: Issue-968 - patched server must report the real attribute
         run: bash .github/workflows/e2e/issue_968_repro.sh http://localhost:8080 da expect-pass
 
