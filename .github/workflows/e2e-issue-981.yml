@@ -219,6 +219,14 @@ jobs:
           PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
           docker exec da "$PY" /tmp/aes_gcm_check.py
 
+      - name: API key sources - cookie ignored, header/query/body accepted (#41)
+        run: |
+          H=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp/api/helpers.py")
+          docker cp docassemble_webapp/docassemble/webapp/api/helpers.py da:"$H"
+          docker cp .github/workflows/e2e/api_key_source_check.py da:/tmp/api_key_source_check.py
+          PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+          docker exec da "$PY" /tmp/api_key_source_check.py
+
       - name: Issue-968 - patched server must report the real attribute
         run: bash .github/workflows/e2e/issue_968_repro.sh http://localhost:8080 da expect-pass
 
