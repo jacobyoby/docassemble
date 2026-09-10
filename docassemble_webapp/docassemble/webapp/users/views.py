@@ -1121,7 +1121,12 @@ def auto_login():
 
 @users_bp.route('/headers', methods=['POST', 'GET'])
 @csrf.exempt
+@login_required
 def show_headers():
+    # NB: debug endpoint. Authentication required (M-9): unauthenticated
+    # callers must not be able to enumerate request headers (Cookie,
+    # Authorization) or server addressing. login_required sits innermost so
+    # the csrf exemption above keeps applying to the wrapped view.
     return jsonify(headers=dict(request.headers), ipaddress=request.remote_addr)
 
 @users_bp.route('/mfa_setup', methods=['POST', 'GET'])
