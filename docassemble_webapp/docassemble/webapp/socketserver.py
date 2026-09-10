@@ -3,7 +3,7 @@
 from contextlib import contextmanager
 import datetime
 import json
-import random
+import secrets
 from typing import Any
 import re
 import sys
@@ -667,7 +667,7 @@ def update_monitor(message):
             times = 0
             while times < 1000:
                 times += 1
-                code = f"{random.randint(1000, 9999):04d}"
+                code = f"{secrets.randbelow(9000) + 1000:04d}"
                 if code in codes_in_use:
                     continue
                 the_code = code
