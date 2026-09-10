@@ -4856,7 +4856,7 @@ def create_playground_package():
                         output += err.output.decode()
                         raise DAError("create_playground_package: error running git push.  " + output) from err
                 logmessage(output)
-                flash(word("Pushed commit to GitHub.") + "<br>" + re.sub(r'[\n\r]+', '<br>', output), 'info')
+                flash(Markup(word("Pushed commit to GitHub.") + "<br>" + str(re.sub(r'[\n\r]+', '<br>', escape(output)))), 'info')
                 time.sleep(3.0)
                 shutil.rmtree(directory)
                 the_args = {'project': current_project, 'pull': '1', 'github_url': ssh_url, 'show_message': '0'}

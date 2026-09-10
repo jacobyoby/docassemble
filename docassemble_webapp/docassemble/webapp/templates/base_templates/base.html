@@ -160,7 +160,7 @@
               {%- set category='danger' %}
             {%- endif %}
         <div class="da-alert alert alert-{{category}} alert-dismissible fade show">
-            {{ message|safe }}
+            {{ message }}
           <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ word('Close') }}"></button>
         </div>
           {%- endfor %}
