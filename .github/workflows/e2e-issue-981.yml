@@ -300,6 +300,14 @@ jobs:
         run: |
           S=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp/socketserver.py")
           docker cp docassemble_webapp/docassemble/webapp/socketserver.py da:"$S"
+          # socketserver.py imports require_secret_key from this branch's
+          # config.py, which the pinned upstream image does not ship. The stock
+          # setup.py imports DEFAULT_SECRET_KEY, which this config.py drops, so
+          # install both together to keep the container importable.
+          C=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp/config.py")
+          docker cp docassemble_webapp/docassemble/webapp/config.py da:"$C"
+          SU=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp/setup.py")
+          docker cp docassemble_webapp/docassemble/webapp/setup.py da:"$SU"
           docker cp .github/workflows/e2e/socketio_verify_check.py da:/tmp/socketio_verify_check.py
           PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
           docker exec da "$PY" /tmp/socketio_verify_check.py
