@@ -73,7 +73,10 @@ stylelint.config.js
 .stylelintrc.json
 .sass-cache/
 CLAUDE.md
-.claude/
+# Personal Claude Code state stays local; the shared settings and hooks are tracked.
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
 .claudeignore
 __pycache__
 pyproject.toml
