@@ -374,7 +374,7 @@ jobs:
 
       - name: File role scope - advocate/trainer granular-only access (#57)
         run: |
-          F=$(docker exec da bash -c "ls /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp/files/")
+          F=$(docker exec da bash -c "ls -d /usr/share/docassemble/local*/lib/python3*/site-packages/docassemble/webapp/files")
           docker cp docassemble_webapp/docassemble/webapp/files/common.py da:"$F/common.py"
           docker cp docassemble_webapp/docassemble/webapp/files/file_access.py da:"$F/file_access.py"
           docker cp docassemble_webapp/docassemble/webapp/files/helpers.py da:"$F/helpers.py"
