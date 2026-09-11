@@ -18,10 +18,17 @@ BASE="$1"
 CONTAINER="$2"
 MODE="$3"
 
+# Use the application's virtualenv, not the container's system Python.
+PY=$(docker exec "$CONTAINER" bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
+if [ -z "$PY" ]; then
+  echo "FAIL: docassemble Python interpreter not found" >&2
+  exit 1
+fi
+
 STUB_MSG="The installed pydantic-core version (2.45.0) is incompatible"
 
 docker exec "$CONTAINER" mkdir -p /tmp/broken932/geopy
-docker exec "$CONTAINER" python3 -c "
+docker exec "$CONTAINER" "$PY" -c "
 import pathlib
 pathlib.Path('/tmp/broken932/geopy/__init__.py').write_text('raise SystemError(\"$STUB_MSG\")')
 pathlib.Path('/tmp/broken932/geopy/geocoders.py').write_text('raise SystemError(\"$STUB_MSG\")')
@@ -31,11 +38,11 @@ IMPORT_TEST="import docassemble.webapp.server; print('server import ok')"
 
 case "$MODE" in
   expect-fail)
-    if docker exec -e PYTHONPATH=/tmp/broken932 "$CONTAINER" python3 -c "$IMPORT_TEST" 2>/tmp/repro_932_err.txt; then
+    if docker exec -e PYTHONPATH=/tmp/broken932 "$CONTAINER" "$PY" -c "$IMPORT_TEST" 2>/tmp/repro_932_err.txt; then
       echo "control FAILED: unpatched server imported fine with broken geopy - this test cannot detect the defect"
       exit 1
     fi
-    if ! grep -q "SystemError" /tmp/repro_932_err.txt; then
+    if ! grep -Fq "SystemError: $STUB_MSG" /tmp/repro_932_err.txt; then
       echo "control FAILED: import broke but not with the issue-932 SystemError"
       cat /tmp/repro_932_err.txt
       exit 1
@@ -43,13 +50,13 @@ case "$MODE" in
     echo "control ok: unpatched server import dies with the issue-932 SystemError"
     ;;
   expect-pass)
-    if ! docker exec -e PYTHONPATH=/tmp/broken932 "$CONTAINER" python3 -c "$IMPORT_TEST" 2>/tmp/repro_932_err.txt; then
+    if ! docker exec -e PYTHONPATH=/tmp/broken932 "$CONTAINER" "$PY" -c "$IMPORT_TEST" 2>/tmp/repro_932_err.txt; then
       echo "FAIL: patched server import still dies with broken geopy"
       cat /tmp/repro_932_err.txt
       exit 1
     fi
     echo "pass: patched server imports with broken geopy"
-    if docker exec -e PYTHONPATH=/tmp/broken932 "$CONTAINER" python3 -c "
+    if docker exec -e PYTHONPATH=/tmp/broken932 "$CONTAINER" "$PY" -c "
 from docassemble.base.geocode import GoogleV3GeoCoder
 try:
     GoogleV3GeoCoder().initialize()
