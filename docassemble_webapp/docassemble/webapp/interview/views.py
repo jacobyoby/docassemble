@@ -1334,7 +1334,10 @@ def index(action_argument=None, refer=None):
         test_data = raw_data
         if real_key in known_datatypes:
             if known_datatypes[real_key] in ('boolean', 'multiselect', 'checkboxes'):
-                if raw_data == "True":
+                if isinstance(raw_data, dict) and not isinstance(raw_data, bool):
+                    data = 'docassemble.base.util.DADict(' + repr(key) + ', elements=' + repr(raw_data) + ', auto_gather=False, gathered=True)'
+                    test_data = raw_data
+                elif raw_data == "True":
                     data = "True"
                     test_data = True
                 elif raw_data == "False":
@@ -1505,7 +1508,10 @@ def index(action_argument=None, refer=None):
                 do_append = True
         elif orig_key in known_datatypes:
             if known_datatypes[orig_key] in ('boolean', 'multiselect', 'checkboxes'):
-                if raw_data == "True":
+                if isinstance(raw_data, dict) and not isinstance(raw_data, bool):
+                    data = 'docassemble.base.util.DADict(' + repr(key) + ', elements=' + repr(raw_data) + ', auto_gather=False, gathered=True)'
+                    test_data = raw_data
+                elif raw_data == "True":
                     data = "True"
                     test_data = True
                 elif raw_data == "False":
