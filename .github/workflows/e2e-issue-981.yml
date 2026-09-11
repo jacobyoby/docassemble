@@ -310,7 +310,7 @@ jobs:
           docker cp docassemble_webapp/docassemble/webapp/socketserver.py da:"$S"
           docker cp .github/workflows/e2e/socketio_verify_check.py da:/tmp/socketio_verify_check.py
           PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
-          docker exec da "$PY" /tmp/socketio_verify_check.py
+          docker exec da "$PY" /tmp/socketio_verify_check.py "$S"
 
       - name: Keygen CSPRNG - verification digits from secrets, not random (#50)
         run: |
