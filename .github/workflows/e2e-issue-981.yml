@@ -17,6 +17,14 @@ on:
       - 'docassemble_webapp/**'
       - '.github/workflows/e2e/**'
       - '.github/workflows/e2e-issue-981.yml'
+  pull_request:
+    branches: [jacob/maintained]
+    paths:
+      - 'docassemble_base/**'
+      - 'docassemble_demo/**'
+      - 'docassemble_webapp/**'
+      - '.github/workflows/e2e/**'
+      - '.github/workflows/e2e-issue-981.yml'
   workflow_dispatch:
 
 # Only the newest revision of a branch needs the expensive container suite.
