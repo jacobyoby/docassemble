@@ -15,6 +15,7 @@
 	daily
 	missingok
 	notifempty
+	sharedscripts
 	postrotate
 	        /usr/share/docassemble/webapp/restart-post-logrotate.sh
 	endscript

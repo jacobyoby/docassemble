@@ -1,0 +1,2 @@
+# Test-only native runtime; source digest published by PyPI for uWSGI 2.0.31.
+uWSGI==2.0.31 --hash=sha256:e8f8b350ccc106ff93a65247b9136f529c14bf96b936ac5b264c6ff9d0c76257

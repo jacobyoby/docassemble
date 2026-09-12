@@ -1,0 +1,6 @@
+--- a/Docker/config/nginx-realip
++++ b/Docker/config/nginx-realip
+@@ -18,3 +18,2 @@
+     # BOTH FILES MUST SHIP TOGETHER -- this line without that file fails nginx -t.
+-    access_log /var/log/nginx/access.log privacy;
+ 

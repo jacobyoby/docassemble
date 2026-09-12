@@ -1,13 +1,25 @@
 #!/bin/bash
+# Discard raw bootstrap output; report failures with bounded fixed records.
+exec 3>&1
+exec >/dev/null 2>&1
+set -o pipefail
 
 export CONTAINERROLE=":${CONTAINERROLE:-all}:"
 export DEBIAN_FRONTEND=noninteractive
 export DA_ROOT="${DA_ROOT:-/usr/share/docassemble}"
 export DA_DEFAULT_LOCAL="local3.14"
+startup_failure() {
+    [ -x "${DA_ROOT}/webapp/privacy-diagnostic" ] || exit 69
+    "${DA_ROOT}/webapp/privacy-diagnostic" nginx "$1" >&3 3>&-
+    exit $?
+}
+[ -x "${DA_ROOT}/webapp/privacy-diagnostic" ] || exit 69
 
 export DA_ACTIVATE="${DA_PYTHON:-${DA_ROOT}/${DA_DEFAULT_LOCAL}}/bin/activate"
 export DA_CONFIG_FILE="${DA_CONFIG:-${DA_ROOT}/config/config.yml}"
-source /dev/stdin < <(su -c "source \"$DA_ACTIVATE\" && python -m docassemble.base.read_config \"$DA_CONFIG_FILE\"" www-data | grep -e '^export LOCALE=' -e '^export DAHOSTNAME=' -e '^export EC2=' -e '^export BEHINDHTTPSLOADBALANCER=' -e '^export USELETSENCRYPT=' -e '^export DALOCATIONREWRITE=' -e '^export WSGIROOT=' -e '^export POSTURLROOT=' -e '^export DAMAXCONTENTLENGTH=' -e '^export DASSLPROTOCOLS=' -e '^export DASSLCIPHERS=' -e '^export DAWEBSOCKETSIP=' -e '^export DAWEBSOCKETSPORT=' -e '^export PORT=' -e '^export USEHTTPS=' -e '^export DAREADONLYFILESYSTEM=')
+DA_NGINX_EXPORTS=$(su -c "source \"$DA_ACTIVATE\" && python -m docassemble.base.read_config \"$DA_CONFIG_FILE\"" www-data | grep -e '^export LOCALE=' -e '^export DAHOSTNAME=' -e '^export EC2=' -e '^export BEHINDHTTPSLOADBALANCER=' -e '^export USELETSENCRYPT=' -e '^export DALOCATIONREWRITE=' -e '^export WSGIROOT=' -e '^export POSTURLROOT=' -e '^export DAMAXCONTENTLENGTH=' -e '^export DASSLPROTOCOLS=' -e '^export DASSLCIPHERS=' -e '^export DAWEBSOCKETSIP=' -e '^export DAWEBSOCKETSPORT=' -e '^export PORT=' -e '^export USEHTTPS=' -e '^export DAREADONLYFILESYSTEM=') || startup_failure config
+source /dev/stdin <<< "$DA_NGINX_EXPORTS" || startup_failure config_eval
+unset DA_NGINX_EXPORTS
 
 set -- $LOCALE
 export LANG=$1
@@ -92,7 +104,6 @@ if [[ $CONTAINERROLE =~ .*:(log):.* ]]; then
     if [ "${DAREADONLYFILESYSTEM:-false}" == "false" ]; then
 	ln -sf /etc/nginx/sites-available/docassemblelog /etc/nginx/sites-enabled/docassemblelog
     fi
-    su -c "source \"$DA_ACTIVATE\" && uwsgi --ini \"${DA_ROOT}/config/docassemblelog.ini\"" www-data &
 else
     if [ "${DAREADONLYFILESYSTEM:-false}" == "false" ]; then
 	rm -f /etc/nginx/sites-enabled/docassemblelog
@@ -119,31 +130,12 @@ if [ "${DAREADONLYFILESYSTEM:-false}" == "false" ]; then
     fi
 fi
 
-function stopfunc {
-    if [[ $CONTAINERROLE =~ .*:(log):.* ]] && [ -f /var/run/uwsgi/uwsgilog.pid ]; then
-	UWSGILOG_PID=$(</var/run/uwsgi/uwsgilog.pid)
-	if [ $? -eq 0 ]; then
-	    echo "Sending stop command to uwsgi log" >&2
-	    kill -INT $UWSGILOG_PID
-	    echo "Waiting for uwsgi log to stop" >&2
-	    wait $UWSGILOG_PID
-	    echo "uwsgi log stopped" >&2
-	fi
-    fi
-    if [ -f /var/run/nginx.pid ]; then
-	NGINX_PID=$(</var/run/nginx.pid)
-	if [ $? -eq 0 ]; then
-	    echo "Sending stop command" >&2
-	    kill -QUIT $NGINX_PID
-	    echo "Waiting for nginx to stop" >&2
-	    wait $NGINX_PID
-	    echo "nginx stopped" >&2
-	fi
-    fi
-    exit 0
-}
-
-trap stopfunc SIGINT SIGTERM
-
-/usr/sbin/nginx -g "daemon off;" &
-wait %1
+# The log-role uWSGI process is separately owned by Supervisor (uwsgilog).
+DA_RUNTIME="${DA_PYTHON:-${DA_ROOT}/${DA_DEFAULT_LOCAL}}"
+"${DA_ROOT}/webapp/privacy-preflight" nginx || startup_failure preflight
+shopt -s execfail
+exec "${DA_ROOT}/webapp/privacy-process" \
+    --component nginx -- /usr/sbin/nginx -e stderr -g 'daemon off;' >&3 3>&-
+# Failed exec keeps its redirections: recover the saved sink from stdout.
+exec 3>&1 >/dev/null
+startup_failure launch
