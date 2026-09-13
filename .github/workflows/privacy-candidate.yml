@@ -1,0 +1,102 @@
+name: Privacy candidate checks
+
+on:
+  push:
+    paths:
+      - 'Docker/privacy-diagnostic/**'
+      - 'Docker/privacy/**'
+      - 'Docker/config/docassemble*.ini*'
+      - 'Docker/config/nginx-*.dist'
+      - 'Docker/nginx.conf'
+      - 'Docker/docassemble-supervisor.conf'
+      - 'Docker/docassemble-syslog-ng.conf'
+      - 'Docker/syslog-ng.conf'
+      - 'Docker/syslog-ng-docker.conf'
+      - 'Docker/docassemble.logrotate'
+      - 'Docker/restart-post-logrotate.sh'
+      - 'Docker/run-nginx.sh'
+      - 'Docker/run-uwsgi.sh'
+      - 'Docker/run-uwsgilog.sh'
+      - 'Docker/run-celery.sh'
+      - 'Docker/run-celery-single.sh'
+      - 'Docker/run-websockets.sh'
+      - 'Docker/run-cron.sh'
+      - 'Docker/cron/**'
+      - 'Docker/sync.sh'
+      - 'Docker/process-email.sh'
+      - 'Docker/initialize.sh'
+      - 'Dockerfile'
+      - '.dockerignore'
+      - 'docassemble_webapp/docassemble/webapp/log_initialize.py'
+      - 'docassemble_webapp/docassemble/webapp/privacy_logging.py'
+      - 'docassemble_webapp/docassemble/webapp/process_email.py'
+      - 'tests/privacy_*/**'
+      - 'tests/verify_privacy.sh'
+      - 'docs/privacy/install-catalog.json'
+      - '.github/workflows/privacy-candidate.yml'
+  pull_request:
+    branches: [jacob/maintained]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: privacy-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  populated-volume-install:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: Docker/privacy-diagnostic/go.mod
+          cache: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Rehearse non-mail installation and rollback on the pinned target image
+        run: bash tests/privacy_native/test_install_image.sh
+  privacy-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GOCACHE: ${{ github.workspace }}/tests/.privacy-build/go-cache
+      GOMODCACHE: ${{ github.workspace }}/tests/.privacy-build/go-mod
+      GOTMPDIR: ${{ github.workspace }}/tests/.privacy-build/go-tmp
+      TEST_TELEMETRY_DIR: ${{ github.workspace }}/tests/.privacy-build/telemetry
+      XDG_CONFIG_HOME: ${{ github.workspace }}/tests/.privacy-build/config
+      GOTOOLCHAIN: local
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create Go working directories before toolchain setup
+        run: mkdir -p "$GOCACHE" "$GOMODCACHE" "$GOTMPDIR" "$TEST_TELEMETRY_DIR" "$XDG_CONFIG_HOME"
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: Docker/privacy-diagnostic/go.mod
+          cache: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Check diagnostics, aggregation, native lifecycle, and launchers
+        run: bash tests/verify_privacy.sh
+      - name: Build disposable native-protocol test image
+        run: docker build -t privacy-candidate-check -f tests/privacy_native/fixtures/privacy-check.Dockerfile tests/privacy_native/fixtures
+      - name: Check compiled preflight and monitor against nginx and Supervisor
+        run: |
+          bash tests/privacy_native/test_nginx_preflight_image.sh privacy-candidate-check
+          bash tests/privacy_native/test_supervisor_monitor_image.sh privacy-candidate-check
+      - name: Build pinned real uWSGI test runtime
+        run: docker build -t privacy-uwsgi-check -f tests/privacy_native/fixtures/uwsgi-check.Dockerfile tests/privacy_native/fixtures
+      - name: Check real uWSGI requests through Go capture
+        run: bash tests/privacy_native/test_uwsgi_image.sh privacy-uwsgi-check
+      - name: Build native log rotation and forwarding fixture
+        run: docker build -t privacy-rotation-check -f tests/privacy_native/fixtures/rotation-check.Dockerfile tests/privacy_native/fixtures
+      - name: Check exclusive rotation ownership and continued forwarding
+        run: bash tests/privacy_native/test_rotation_image.sh privacy-rotation-check
+      - name: Scan Go packages and reachable standard library for vulnerabilities
+        run: GOPROXY=https://proxy.golang.org go -C Docker/privacy-diagnostic run golang.org/x/vuln/cmd/govulncheck@v1.7.0 ./...

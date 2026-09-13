@@ -1,11 +1,37 @@
 # syntax=docker/dockerfile:1
+FROM --platform=$BUILDPLATFORM golang:1.27.0 AS privacy-diagnostic-build
+WORKDIR /src
+COPY Docker/privacy-diagnostic/ ./
+ARG TARGETOS
+ARG TARGETARCH
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH GOTOOLCHAIN=local GOPROXY=off \
+    go build -trimpath -buildvcs=false -o /out/privacy-diagnostic . \
+    && CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH GOTOOLCHAIN=local GOPROXY=off \
+    go build -trimpath -buildvcs=false -o /out/privacy-process ./cmd/privacy-process \
+    && CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH GOTOOLCHAIN=local GOPROXY=off \
+    go build -trimpath -buildvcs=false -o /out/privacy-preflight ./cmd/privacy-preflight \
+    && CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH GOTOOLCHAIN=local GOPROXY=off \
+    go build -trimpath -buildvcs=false -o /out/privacy-monitor ./cmd/privacy-monitor
+
 FROM jhpyle/docassemble-os
 USER root
+COPY --from=privacy-diagnostic-build --chown=0:0 --chmod=0755 \
+    /out/privacy-diagnostic /usr/share/docassemble/webapp/privacy-diagnostic
+COPY --from=privacy-diagnostic-build --chown=0:0 --chmod=0755 \
+    /out/privacy-process /usr/share/docassemble/webapp/privacy-process
+COPY --from=privacy-diagnostic-build --chown=0:0 --chmod=0755 \
+    /out/privacy-preflight /usr/share/docassemble/webapp/privacy-preflight
+COPY --from=privacy-diagnostic-build --chown=0:0 --chmod=0755 \
+    /out/privacy-monitor /usr/share/docassemble/webapp/privacy-monitor
 RUN --mount=type=bind,source=.,target=/tmp/docassemble \
 DEBIAN_FRONTEND=noninteractive TERM=xterm LC_CTYPE=C.UTF-8 LANG=C.UTF-8 \
 bash -c \
 "cp /tmp/docassemble/docassemble_webapp/docassemble.wsgi /usr/share/docassemble/webapp/ \
 && cp /tmp/docassemble/Docker/*.sh /usr/share/docassemble/webapp/ \
+&& install -d -m 0755 /usr/local/lib/docassemble-privacy \
+&& cp /tmp/docassemble/Docker/privacy/nginx-lifecycle.conf /usr/local/lib/docassemble-privacy/ \
+&& chmod -R go-w /usr/local/lib/docassemble-privacy \
+&& cp /tmp/docassemble/Docker/nginx.conf /etc/nginx/nginx.conf \
 && cp /tmp/docassemble/Docker/VERSION /usr/share/docassemble/webapp/ \
 && cp /tmp/docassemble/Docker/config/* /usr/share/docassemble/config/ \
 && cp /tmp/docassemble/Docker/cgi-bin/index.sh /usr/lib/cgi-bin/ \

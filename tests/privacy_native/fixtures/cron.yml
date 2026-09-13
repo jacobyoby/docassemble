@@ -1,0 +1,22 @@
+metadata:
+  title: Synthetic scheduled-interview check
+---
+mandatory: True
+code: |
+  allow_cron = True
+  multi_user = True
+  cron_count = 0
+---
+event: cron_hourly
+code: |
+  import os
+  assert os.getuid() == os.getgid() == 33
+  assert os.environ['USER'] == os.environ['LOGNAME'] == 'www-data'
+  assert os.environ['HOME'] == '/var/www'
+  assert os.nice(0) == 19
+  cron_count += 1
+  os.write(2, b'JOS81_PRIVATE_CRON_STDERR\n')
+  response('JOS81_PRIVATE_CRON_RESPONSE')
+---
+mandatory: True
+question: JOS81_CRON_COUNT_${ cron_count }
