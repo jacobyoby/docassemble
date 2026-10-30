@@ -17,6 +17,14 @@ on:
       - 'docassemble_webapp/**'
       - '.github/workflows/e2e/**'
       - '.github/workflows/e2e-issue-981.yml'
+  pull_request:
+    branches: [jacob/maintained]
+    paths:
+      - 'docassemble_base/**'
+      - 'docassemble_demo/**'
+      - 'docassemble_webapp/**'
+      - '.github/workflows/e2e/**'
+      - '.github/workflows/e2e-issue-981.yml'
   workflow_dispatch:
 
 # Only the newest revision of a branch needs the expensive container suite.
@@ -310,7 +318,7 @@ jobs:
           docker cp docassemble_webapp/docassemble/webapp/setup.py da:"$SU"
           docker cp .github/workflows/e2e/socketio_verify_check.py da:/tmp/socketio_verify_check.py
           PY=$(docker exec da bash -c "ls /usr/share/docassemble/local*/bin/python3 | head -1")
-          docker exec da "$PY" /tmp/socketio_verify_check.py
+          docker exec da "$PY" /tmp/socketio_verify_check.py "$S"
 
       - name: Keygen CSPRNG - verification digits from secrets, not random (#50)
         run: |
